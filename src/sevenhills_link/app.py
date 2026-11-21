@@ -78,6 +78,29 @@ class JsApi:
             return self._core.set_led_tool(picked[0])
         return self._core.status()
 
+    def panel_catalog(self):
+        from .functions import catalog
+        return catalog()
+
+    def panel_learn(self):
+        self._core.panel.start_learn()
+        return self._core.status()
+
+    def panel_cancel(self):
+        self._core.panel.cancel_learn()
+        return self._core.status()
+
+    def panel_save(self, mapping):
+        return self._core.panel_save(dict(mapping or {}))
+
+    def panel_delete(self, mid):
+        self._core.panel.delete_mapping(str(mid))
+        return self._core.status()
+
+    def panel_active(self, on):
+        self._core.panel.set_active(bool(on))
+        return self._core.status()
+
     def open_gremlin_folder(self):
         self._core.open_gremlin_folder()
 

@@ -162,6 +162,47 @@
         </div>
       </div>
 
+      <div class="card" style="display:flex;flex-direction:column;gap:12px" id="setupCard">
+        <div class="row">
+          <div class="grow"><div style="font-weight:600;font-size:15px">Panel setup <span class="dim" style="font-weight:400;font-size:12px">· buttons do things, LEDs show the ship</span></div>
+            <div class="muted" style="font-size:13px">Press a button on your panel, pick what it does and its colours. The LED follows the game, also when someone else in the crew changes it.</div></div>
+          <div class="seg" id="panelSeg">
+            <button type="button" data-on="0" onclick="call('panel_active', false)">Paused</button>
+            <button type="button" data-on="1" onclick="call('panel_active', true)">Active</button>
+          </div>
+        </div>
+        <div class="row" style="gap:10px">
+          <button class="btn small" onclick="startLearn()">Add button</button>
+          <button class="btn outline small" onclick="startLedOnly()">Add LED only</button>
+          <span class="dim grow" style="font-size:12px" id="panelLog"></span>
+        </div>
+
+        <div class="hidden" id="editor" style="background:var(--bg2);border:1px solid rgba(240,180,67,.35);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px">
+          <div id="edWait" class="row"><span class="display grow" style="font-size:18px">Press the button on your panel…</span><button class="link" onclick="cancelEd()">Cancel</button></div>
+          <div id="edBody" class="hidden" style="display:flex;flex-direction:column;gap:10px">
+            <div class="row"><span class="display grow" style="font-size:18px" id="edTitle"></span><button class="link" style="color:var(--dim)" onclick="cancelEd()">Cancel</button></div>
+            <div id="edDevRow" class="row hidden" style="font-size:13px"><span class="dim" style="width:110px">Device</span><select class="inp" id="edDev" onchange="ed.device_id=this.value;ed.device_name=this.options[this.selectedIndex].text"></select></div>
+            <div class="err hidden" id="edWarn" style="font-size:12px"></div>
+            <div class="row" style="font-size:13px"><span class="dim" style="width:110px">What it does</span><select class="inp grow" id="edFn" onchange="pickFn(this.value)"></select></div>
+            <div class="row hidden" id="edModeRow" style="font-size:13px"><span class="dim" style="width:110px">Button type</span>
+              <select class="inp" id="edMode" onchange="ed.mode=this.value"><option value="button">Push button: flips it, always in step with the game</option><option value="switch">Switch: on when pressed down, off when released</option></select></div>
+            <div class="dim" style="font-size:12px" id="edNote"></div>
+            <div class="row" style="font-size:13px;flex-wrap:wrap"><span class="dim" style="width:110px">LED</span>
+              <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="edHasLed" style="accent-color:var(--gold)" onchange="ed.led=this.checked?(parseInt($('edLed').value)||1):null;drawEd()"> Has an LED</label>
+              <span id="edLedCtl" style="display:flex;gap:8px;align-items:center"><span class="dim">number</span><input class="inp" id="edLed" type="number" min="1" max="255" style="width:64px" onchange="ed.led=parseInt(this.value)||1">
+              <button class="btn outline small" onclick="edLight(0)">Light</button><button class="btn outline small" onclick="edLight(1)">Next</button><span class="dim" style="font-size:12px">Is the right LED lit? Then keep this number.</span></span></div>
+            <div class="row" style="font-size:13px;flex-wrap:wrap"><span class="dim" style="width:110px">Colours</span>
+              <button class="chip" id="edOnBtn" onclick="palTarget='on';drawEd()"><span id="edOnSw" style="display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px"></span> <span id="edOnLbl">On</span></button>
+              <button class="chip" id="edOffBtn" onclick="palTarget='off';drawEd()"><span id="edOffSw" style="display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px"></span> <span id="edOffLbl">Off</span></button>
+              <span class="dim" style="font-size:12px">pick a colour below</span></div>
+            <div class="pal" id="edPal"></div>
+            <div class="row"><button class="btn small" onclick="saveEd()">Save</button><span class="err" id="edErr" style="font-size:13px"></span></div>
+          </div>
+        </div>
+
+        <div id="mapList" style="display:flex;flex-direction:column;font-size:13px"></div>
+      </div>
+
       <div class="card" style="display:flex;flex-direction:column;gap:12px">
         <div><div style="font-weight:600;font-size:15px">Panel test <span class="dim" style="font-weight:400;font-size:12px">· find your buttons and LEDs</span></div>
           <div class="muted" style="font-size:13px">Press a button on a stick or panel to see its number. Light an LED by number to find which one it is.</div></div>
@@ -233,6 +274,99 @@
   function ledLight() { if (ledDev()) call('led_test', ledDev(), ledNum(), ledColor) }
   function ledNext() { $('ledNum').value = ledNum() + 1; ledLight() }
   function ledReset() { if (ledDev()) call('led_reset', ledDev()) }
+
+  // ---------------- panel setup
+  let CAT = [], ed = null, palTarget = 'on', lastMaps = null
+  const fnById = id => CAT.find(f => f.id === id)
+  function startLearn() { ed = null; call('panel_learn') }
+  function startLedOnly() {
+    const devs = (S && S.virpil && S.virpil.devices || []).filter(d => d.connected)
+    const first = CAT.find(f => f.kind === 'led')
+    ed = { ledOnly: true, device_id: devs[0] ? devs[0].id : '', device_name: devs[0] ? devs[0].name : '', button: null, function: first.id, mode: 'button', led: 1, on_color: first.on_color, off_color: first.off_color }
+    openEd()
+  }
+  function editMap(id) {
+    const m = (S.panel_setup.mappings || []).find(x => x.id === id); if (!m) return
+    ed = Object.assign({ ledOnly: m.button === null }, m); openEd()
+  }
+  function cancelEd() { ed = null; call('panel_cancel'); show('editor', false) }
+  function openEd() {
+    show('editor', true); show('edWait', false); show('edBody', true); $('edErr').textContent = ''
+    const fns = CAT.filter(f => ed.ledOnly ? f.kind === 'led' : f.kind !== 'led')
+    const groups = [...new Set(fns.map(f => f.group))]
+    $('edFn').innerHTML = groups.map(g => '<optgroup label="' + esc(g) + '">' + fns.filter(f => f.group === g).map(f => '<option value="' + f.id + '">' + esc(f.label) + '</option>').join('') + '</optgroup>').join('')
+    if (!ed.function || !fns.some(f => f.id === ed.function)) pickFn(fns[0].id, true)
+    $('edFn').value = ed.function
+    const devs = (S.virpil && S.virpil.devices || []).filter(d => d.connected)
+    $('edDev').innerHTML = devs.map(d => '<option value="' + esc(d.id) + '">' + esc(d.name) + '</option>').join('') || '<option value="">No Virpil device found</option>'
+    if (ed.device_id) $('edDev').value = devs.find(d => d.id.startsWith(ed.device_id)) ? devs.find(d => d.id.startsWith(ed.device_id)).id : ''
+    const pal = []; for (const r of LV) for (const g of LV) for (const b of LV) pal.push(r + g + b)
+    $('edPal').innerHTML = pal.map(c => '<span data-c="' + c + '" style="background:#' + c + '"></span>').join('')
+    document.querySelectorAll('#edPal span').forEach(x => x.onclick = () => { ed[palTarget + '_color'] = x.dataset.c; drawEd(); if (ed.led) edLight(0, x.dataset.c) })
+    drawEd()
+  }
+  function pickFn(id, silent) {
+    const f = fnById(id); if (!f) return
+    ed.function = id; ed.on_color = f.on_color; ed.off_color = f.off_color
+    if (!f.has_on_off) ed.mode = 'button'
+    if (!silent) drawEd()
+  }
+  function drawEd() {
+    if (!ed) return
+    const f = fnById(ed.function) || {}
+    $('edTitle').textContent = ed.ledOnly ? 'LED only' : (ed.device_name || 'Device') + ' · button ' + ed.button
+    show('edDevRow', !!ed.ledOnly)
+    show('edModeRow', !!f.has_on_off && !f.risky)
+    $('edMode').value = ed.mode || 'button'
+    $('edNote').textContent = (f.risky ? 'Hold the button for 1 second to use it. ' : '') + (f.note || '') + (f.has_state ? '' : (f.kind === 'led' ? '' : ' The LED flashes when it sends.'))
+    $('edHasLed').checked = !!ed.led; $('edHasLed').disabled = !!ed.ledOnly
+    $('edLedCtl').style.display = ed.led ? 'flex' : 'none'
+    if (ed.led) $('edLed').value = ed.led
+    $('edOnSw').style.background = '#' + ed.on_color; $('edOffSw').style.background = '#' + ed.off_color
+    $('edOnLbl').textContent = f.id === 'master' ? 'SCM' : f.kind === 'led' ? 'Warning' : 'On'
+    $('edOffLbl').textContent = f.id === 'master' ? 'NAV' : f.kind === 'led' ? 'Normal' : 'Off'
+    $('edOnBtn').classList.toggle('on', palTarget === 'on'); $('edOffBtn').classList.toggle('on', palTarget === 'off')
+    document.querySelectorAll('#edPal span').forEach(x => x.classList.toggle('on', x.dataset.c === ed[palTarget + '_color']))
+  }
+  function edDevice() { return ed.ledOnly ? $('edDev').value : ed.device_id }
+  function edLight(step, color) {
+    if (step) { ed.led = (parseInt($('edLed').value) || 0) + 1; $('edLed').value = ed.led }
+    ed.led = parseInt($('edLed').value) || 1
+    if (edDevice()) call('led_test', edDevice(), ed.led, color || ed.on_color)
+  }
+  async function saveEd() {
+    if (ed.ledOnly) { ed.device_id = $('edDev').value; ed.device_name = $('edDev').options[$('edDev').selectedIndex] ? $('edDev').options[$('edDev').selectedIndex].text : '' }
+    const body = Object.assign({}, ed); delete body.ledOnly
+    const s = await api('panel_save', body)
+    if (s) { render(s); if (s.leds && s.leds.result && !s.leds.result.ok && Date.now() / 1000 - s.leds.result.at < 2) { $('edErr').textContent = s.leds.result.text } else { ed = null; show('editor', false) } }
+  }
+  function drawPanel(s) {
+    const ps = s.panel_setup || {}
+    document.querySelectorAll('#panelSeg button').forEach(x => x.classList.toggle('on', (x.dataset.on === '1') === !!ps.active))
+    const l = ps.learn
+    if (l && l.waiting) { show('editor', true); show('edWait', true); show('edBody', false) }
+    else if (l && !l.waiting && !ed) {
+      const ex = l.existing
+      ed = ex ? Object.assign({ ledOnly: false }, ex) : { ledOnly: false, device_id: l.device_id, device_name: l.device_name, button: l.button, function: null, mode: 'button', led: l.button, on_color: '00FF00', off_color: 'FF0000' }
+      openEd()
+      ed.in_game = l.in_game
+    }
+    if (ed && ed.in_game && ed.in_game.length) { $('edWarn').textContent = 'In Star Citizen this button already does: ' + ed.in_game.join(', ') + '. Clear that binding in the game, or one press will do both.'; show('edWarn', true) } else show('edWarn', false)
+    const maps = ps.mappings || []
+    const key = JSON.stringify(maps)
+    if (key !== lastMaps) {
+      lastMaps = key
+      $('mapList').innerHTML = maps.length ? maps.map(m => '<div class="row" style="padding:8px 0;border-top:1px solid var(--line)">' +
+        '<span style="width:170px" class="dim">' + esc(m.button === null ? (m.device_name || 'LED') : (m.device_name || m.device_id) + ' · ' + m.button) + '</span>' +
+        '<span class="grow"><b style="font-weight:600">' + esc(m.label) + '</b>' + (m.mode === 'switch' ? ' <span class="dim">· switch</span>' : '') + (m.in_game && m.in_game.length ? ' <span style="color:var(--warn)" title="' + esc(m.in_game.join(', ')) + '">· also bound in game</span>' : '') + '</span>' +
+        '<span class="dim mono" style="font-size:11px">' + (m.led ? 'LED ' + m.led : 'no LED') + '</span>' +
+        '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#' + m.on_color + '"></span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#' + m.off_color + '"></span>' +
+        '<button class="link" onclick="editMap(\'' + m.id + '\')">Edit</button><button class="link" style="color:var(--dim)" onclick="if(confirm(\'Remove this mapping?\')) call(\'panel_delete\',\'' + m.id + '\')">Remove</button></div>').join('')
+        : '<span class="dim" style="font-size:13px">Nothing set up yet. Press Add button and then a button on your panel.</span>'
+    }
+    const lg = (ps.log || [])[0]
+    $('panelLog').textContent = ps.led_error ? 'LED: ' + ps.led_error : lg ? 'Sent ' + lg.action + (lg.ok ? '' : ' · ' + lg.error) : ''
+  }
   function setBridge(on) { if (!!(S && S.bridge && S.bridge.enabled) !== on) call('set_bridge', on) }
   function toggleKey() { keyShown = !keyShown; if (S) render(S) }
   async function copyKey() {
@@ -299,6 +433,7 @@
       : '<span class="dim">' + esc(v.error || 'No Virpil devices found. Plug them in and press Scan again.') + '</span>'
     if (lastVirpil !== vHtml) { $('virpilList').innerHTML = vHtml; lastVirpil = vHtml }
 
+    drawPanel(s)
     const pn = s.panel || {}
     const lp = pn.last
     $('lastPress').textContent = lp ? lp.device + ' · button ' + lp.button + (lp.pressed ? '' : ' (released)') : (pn.error || 'Press any button…')
@@ -322,7 +457,7 @@
 
   async function tick() { try { const s = await api('status'); if (s) render(s) } catch (e) {} }
   ledPalette()
-  window.addEventListener('pywebviewready', () => { tick(); setInterval(tick, 500) })
+  window.addEventListener('pywebviewready', async () => { CAT = (await api('panel_catalog')) || []; tick(); setInterval(tick, 500) })
 </script>
 </body>
 </html>

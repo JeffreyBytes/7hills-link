@@ -12,9 +12,10 @@ import time
 import webbrowser
 from pathlib import Path
 
-from . import __version__, api, detect, gamecfg, leds, protoset, virpil
+from . import __version__, api, detect, functions, gamecfg, leds, protoset, scbinds, virpil
 from .actions import GameActions
-from .bridge import Bridge
+from .bridge import Bridge, state_from_frame
+from .panel import PanelEngine
 from .panel_input import ButtonWatcher
 from .paths import data_dir, resource
 from .stream import GameStream
@@ -68,6 +69,11 @@ class Core:
         self._last_settings = 0.0
         self._stop = threading.Event()
         self.buttons = ButtonWatcher()
+        self.panel = PanelEngine(lambda: state_from_frame(self.latest_frame()),
+                                 lambda: self.actions if self.stream and self.stream.connected else None,
+                                 self.led_tool)
+        self.buttons.listeners.append(self.panel.on_button)
+        self._binds: tuple[float, dict] = (0.0, {})
         self.led_result: dict | None = None
         self.virpil: list[dict] = []
         self.virpil_error: str | None = None
@@ -85,7 +91,7 @@ class Core:
                 self.channel = running
             elif self.channel not in names:
                 self.channel = "LIVE" if "LIVE" in names else (names[0] if names else None)
-            acts = self.bridge.cfg.enabled
+            acts = self.bridge.cfg.enabled or bool(self.panel.cfg.mappings)
             self.cfg_state = {i.channel: {"missing": gamecfg.missing(i.user_cfg, acts), "path": str(i.user_cfg)} for i in installs}
             self.env_ok = gamecfg.env_enabled()
 
@@ -101,7 +107,7 @@ class Core:
     def enable_telemetry(self) -> dict:
         """Write user.cfg for every install found, and the user environment variable."""
         result = {"changed": [], "needs_admin": [], "errors": []}
-        acts = self.bridge.cfg.enabled
+        acts = self.bridge.cfg.enabled or bool(self.panel.cfg.mappings)
         for inst in self.installs:
             try:
                 if gamecfg.apply(inst.user_cfg, acts):
@@ -293,6 +299,39 @@ class Core:
         self.led_result = {"ok": ok, "text": text or ("Device LEDs back to its own profile" if ok else "Failed"), "at": time.time()}
         return self.status()
 
+    # ---------------------------------------------------------------- panel setup
+
+    def game_bindings(self) -> dict:
+        """Star Citizen's joystick bindings for the current channel, re-read every 20 s."""
+        t, b = self._binds
+        inst = self.current()
+        if inst and time.time() - t > 20:
+            b = scbinds.bindings(inst.folder)
+            self._binds = (time.time(), b)
+        return b
+
+    def panel_save(self, mapping: dict) -> dict:
+        try:
+            self.panel.save_mapping(mapping)
+            self.led_result = None
+        except ValueError as e:
+            self.led_result = {"ok": False, "text": str(e), "at": time.time()}
+        self.scan()  # the actions line in user.cfg is now wanted
+        return self.status()
+
+    def panel_view(self) -> dict:
+        v = self.panel.status()
+        binds = self.game_bindings()
+        cat = {f["id"]: f for f in functions.catalog()}
+        for m in v["mappings"]:
+            m["label"] = cat.get(m["function"], {}).get("label", m["function"])
+            m["in_game"] = binds.get(m.get("device_id") or "", {}).get(m.get("button") or -1, [])
+        if v["learn"] and not v["learn"].get("waiting"):
+            l = dict(v["learn"])
+            l["in_game"] = binds.get(l.get("device_id") or "", {}).get(l.get("button") or -1, [])
+            v["learn"] = l
+        return v
+
     def set_bridge_risky(self, allow: bool) -> dict:
         self.bridge.cfg.allow_risky = bool(allow)
         self.bridge.cfg.save()
@@ -327,6 +366,7 @@ class Core:
             self.bridge.start()
         self.scan_virpil()
         self.buttons.start()
+        self.panel.start()
         self.led_tool()
         self.refresh_settings(force=True)
         last_sent_frame_at = 0.0
@@ -358,6 +398,7 @@ class Core:
         self._stop.set()
         self.bridge.stop()
         self.buttons.stop()
+        self.panel.stop()
         if self.stream:
             self.stream.stop()
 
@@ -396,5 +437,6 @@ class Core:
                 "bridge": self.bridge.status(),
                 "virpil": self.virpil_view(),
                 "panel": self.buttons.status(),
+                "panel_setup": self.panel_view(),
                 "leds": {"tool": self.bridge.cfg.led_tool, "result": self.led_result},
             }

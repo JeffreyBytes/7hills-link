@@ -36,6 +36,7 @@ class ButtonWatcher:
         self.error: str | None = None
         self.devices: dict[int, dict] = {}  # SDL instance id -> {name, vid, pid, buttons}
         self.presses: collections.deque = collections.deque(maxlen=12)
+        self.listeners: list = []  # called with each press dict, from this watcher's thread
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -78,14 +79,20 @@ class ButtonWatcher:
                         self.devices.pop(ev.instance_id, None)
                     elif ev.type in (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP):
                         d = self.devices.get(ev.instance_id) or {}
-                        self.presses.appendleft({
+                        press = {
                             "device": d.get("name") or "Joystick",
                             "device_id": _device_id(d),
                             "virpil": d.get("vid") == VIRPIL_VID,
                             "button": int(ev.button) + 1,  # 1-based, like Windows and the VPC tool
                             "pressed": ev.type == pygame.JOYBUTTONDOWN,
                             "at": time.time(),
-                        })
+                        }
+                        self.presses.appendleft(press)
+                        for cb in list(self.listeners):
+                            try:
+                                cb(press)
+                            except Exception:
+                                pass
                 time.sleep(0.02)
         finally:
             try:
