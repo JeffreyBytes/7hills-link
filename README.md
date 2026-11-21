@@ -17,6 +17,10 @@ Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star 
 4. **Links this PC to your 7Net account**: shows a code, opens 7hills.space/link, you press *Connect this PC*. The key is stored in Windows Credential Manager.
 5. **Streams** from the game's local server (`127.0.0.1:50051`, never exposed to the network) and sends the latest state to 7Net about once a second.
 
+## What the game's telemetry offers
+
+See **[docs/TELEMETRY.md](docs/TELEMETRY.md)** for everything we have found: how to switch it on, every field you can read, the actions you can send to the game, and how the API definitions are read from the exe. Useful if you want to build your own tool (button boxes, Joystick Gremlin, dashboards).
+
 ## What it does not do
 
 - It does not read game memory, inject anything, or touch Easy Anti-Cheat. It only uses the telemetry server the game itself provides.
