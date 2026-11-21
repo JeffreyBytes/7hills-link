@@ -153,12 +153,16 @@
             <span class="dim grow" id="bridgeLast">No actions sent yet.</span>
             <button class="btn outline small" onclick="api('open_gremlin_folder')">Joystick Gremlin plugin</button>
           </div>
-          <div style="border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px">
-            <div class="row" style="font-size:13px"><span class="grow"><b>Virpil devices</b> <span class="dim">· pick the ones that should show ship status on their LEDs</span></span>
-              <button class="link" onclick="call('scan_virpil')">Scan again</button></div>
-            <div id="virpilList" style="display:flex;flex-direction:column;gap:6px;font-size:13px"></div>
-          </div>
           <p class="err" id="bridgeErr" style="margin:0"></p>
+        </div>
+      </div>
+
+      <div class="card row">
+        <div class="grow"><div style="font-weight:600;font-size:15px">Joysticks &amp; panels</div>
+          <div class="muted" style="font-size:13px">Read your sticks and panels, let buttons control the ship and Virpil LEDs show its state. Off: 7Hills Link leaves your devices alone.</div></div>
+        <div class="seg" id="joySeg">
+          <button type="button" data-on="0" onclick="call('set_joysticks', false)">Off</button>
+          <button type="button" data-on="1" onclick="call('set_joysticks', true)">On</button>
         </div>
       </div>
 
@@ -201,9 +205,14 @@
         </div>
 
         <div id="mapList" style="display:flex;flex-direction:column;font-size:13px"></div>
+          <div style="border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px">
+            <div class="row" style="font-size:13px"><span class="grow"><b>Virpil devices</b> <span class="dim">· devices found on this PC</span></span>
+              <button class="link" onclick="call('scan_virpil')">Scan again</button></div>
+            <div id="virpilList" style="display:flex;flex-direction:column;gap:6px;font-size:13px"></div>
+          </div>
       </div>
 
-      <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="display:flex;flex-direction:column;gap:12px" id="testCard">
         <div><div style="font-weight:600;font-size:15px">Panel test <span class="dim" style="font-weight:400;font-size:12px">· find your buttons and LEDs</span></div>
           <div class="muted" style="font-size:13px">Press a button on a stick or panel to see its number. Light an LED by number to find which one it is.</div></div>
         <div class="row" style="background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px">
@@ -342,6 +351,8 @@
   }
   function drawPanel(s) {
     const ps = s.panel_setup || {}
+    document.querySelectorAll('#joySeg button').forEach(x => x.classList.toggle('on', (x.dataset.on === '1') === !!ps.enabled))
+    show('setupCard', !!ps.enabled); show('testCard', !!ps.enabled)
     document.querySelectorAll('#panelSeg button').forEach(x => x.classList.toggle('on', (x.dataset.on === '1') === !!ps.active))
     const l = ps.learn
     if (l && l.waiting) { show('editor', true); show('edWait', true); show('edBody', false) }

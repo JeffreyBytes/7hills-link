@@ -319,6 +319,17 @@ class Core:
         self.scan()  # the actions line in user.cfg is now wanted
         return self.status()
 
+    def set_joysticks(self, on: bool) -> dict:
+        """Joysticks & panels on/off: reading buttons, panel setup and Virpil LEDs."""
+        self.panel.cfg.enabled = bool(on)
+        self.panel.cfg.save()
+        if on:
+            self.buttons.start()
+        else:
+            self.buttons.stop()
+            self.panel.cancel_learn()
+        return self.status()
+
     def panel_view(self) -> dict:
         v = self.panel.status()
         binds = self.game_bindings()
@@ -365,7 +376,8 @@ class Core:
         if self.bridge.cfg.enabled:
             self.bridge.start()
         self.scan_virpil()
-        self.buttons.start()
+        if self.panel.cfg.enabled:
+            self.buttons.start()
         self.panel.start()
         self.led_tool()
         self.refresh_settings(force=True)

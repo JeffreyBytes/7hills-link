@@ -67,6 +67,7 @@ def _engine(tmp_path, monkeypatch, state):
     acts = FakeActions()
     led_calls = []
     eng = PanelEngine(lambda: state, lambda: acts, lambda: "tool", led_runner=lambda tool, dev, n, c: (led_calls.append((dev, n, c)) or (True, "")))
+    eng.cfg.enabled = True
     eng.start()
     return eng, acts, led_calls
 
@@ -129,3 +130,14 @@ def test_scbinds(tmp_path):
       <actionmap name="spaceship_movement"><action name="v_toggle_landing_system"><rebind input="js2_button7"/></action></actionmap>
     </ActionProfiles></ActionMaps>""")
     assert scbinds.bindings(tmp_path) == {"3344:0259": {7: ["v_toggle_landing_system"]}}
+
+
+def test_joysticks_off_ignores_presses(tmp_path, monkeypatch):
+    state = {"in_game": True, "seated": True, "gear": "deployed"}
+    eng, acts, _ = _engine(tmp_path, monkeypatch, state)
+    eng.save_mapping({"device_id": "3344:0259", "button": 7, "function": "gear"})
+    eng.cfg.enabled = False
+    _press(eng, 7)
+    _time.sleep(0.3)
+    assert acts.sent == []
+    eng.stop()

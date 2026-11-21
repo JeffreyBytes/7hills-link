@@ -78,6 +78,9 @@ class JsApi:
             return self._core.set_led_tool(picked[0])
         return self._core.status()
 
+    def set_joysticks(self, on):
+        return self._core.set_joysticks(bool(on))
+
     def panel_catalog(self):
         from .functions import catalog
         return catalog()

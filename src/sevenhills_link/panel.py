@@ -37,9 +37,11 @@ class PanelConfig:
             pass
         self.active = bool(d.get("active", True))
         self.mappings: list[dict] = [m for m in d.get("mappings", []) if isinstance(m, dict) and m.get("function") in BY_ID][:200]
+        # Joysticks & panels as a whole: off by default, on for anyone who already set up buttons.
+        self.enabled = bool(d.get("enabled", bool(self.mappings)))
 
     def save(self) -> None:
-        self.path.write_text(json.dumps({"active": self.active, "mappings": self.mappings}, indent=2), encoding="utf-8")
+        self.path.write_text(json.dumps({"enabled": self.enabled, "active": self.active, "mappings": self.mappings}, indent=2), encoding="utf-8")
 
 
 def _color(c, default: str) -> str:
@@ -148,7 +150,7 @@ class PanelEngine:
         return None
 
     def status(self) -> dict:
-        return {"active": self.cfg.active, "mappings": [dict(m) for m in self.cfg.mappings], "learn": self.learn,
+        return {"enabled": self.cfg.enabled, "active": self.cfg.active, "mappings": [dict(m) for m in self.cfg.mappings], "learn": self.learn,
                 "log": self.log[:5], "led_error": self.led_error}
 
     # ---------------------------------------------------------------- the loop
@@ -181,7 +183,7 @@ class PanelEngine:
             self.learn = {"waiting": False, "device_id": dev, "device_name": p.get("device"), "button": p.get("button"),
                           "existing": self.find(dev, p.get("button"))}
             return
-        if not self.cfg.active:
+        if not (self.cfg.enabled and self.cfg.active):
             return
         m = self.find(p.get("device_id") or "", p.get("button"))
         if not m:
@@ -230,7 +232,7 @@ class PanelEngine:
         st = self._get_state() or {}
         in_game = bool(st.get("in_game")) and self._get_actions() is not None
         lit = [m for m in self.cfg.mappings if m.get("led")]
-        if not (self.cfg.active and in_game and lit):
+        if not (self.cfg.enabled and self.cfg.active and in_game and lit):
             # Hand the panels back to their own profile once.
             for dev in list(self._driving):
                 self._jobs.put(("led", dev, 0, OFF))
