@@ -3,5 +3,3 @@ protobuf>=5.26
 pywebview>=5.0
 keyring>=24
 psutil>=5.9
-hidapi>=0.14
-pygame-ce>=2.5

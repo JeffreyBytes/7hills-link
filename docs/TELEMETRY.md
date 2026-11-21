@@ -116,7 +116,7 @@ Paths below are protobuf field names as JSON (`preserving_proto_field_name`).
 
 ## 4. Sending: triggerable actions
 
-Actions are sent with `TriggerGameAction { action_name, hold_ms }`. `ListTriggerableActions` returns the list for the build you run; the list below is from PTU, November 2026 (112 actions). 7Hills Link's [local bridge](BRIDGE.md) sends them for tools on your PC.
+Actions are sent with `TriggerGameAction { action_name, hold_ms }`. `ListTriggerableActions` returns the list for the build you run; the list below is from PTU, November 2026 (112 actions).
 
 **Lights and player**
 - `v_lights`, `v_lights_on`, `v_lights_off`
@@ -229,4 +229,4 @@ Possible ways to connect it:
 - A small local bridge that turns joystick button events (Joystick Gremlin, or the Virpil/VKB software's virtual buttons) into `TriggerGameAction` calls.
 - The same bridge driving Virpil LEDs from the stream, through Virpil's own LED tools or their USB HID protocol.
 
-7Hills Link 0.2 includes such a bridge, off by default, with a Joystick Gremlin plugin: see [BRIDGE.md](BRIDGE.md).
+7Hills Link does not do this; a separate panel app is planned.

@@ -1,7 +1,6 @@
 """Entry point: `7HillsLink.exe`, or `python -m sevenhills_link`.
 
-  --write-cfg <path> [--with-actions]
-                       (used by the client itself, elevated) add the telemetry lines to user.cfg
+  --write-cfg <path>   (used by the client itself, elevated) add the telemetry lines to user.cfg
   --headless           run without a window, log status to the console
   --version
 """
@@ -26,7 +25,7 @@ def main(argv: list[str] | None = None) -> int:
         path = Path(argv[i + 1]) if i + 1 < len(argv) else None
         if not path or path.name.lower() != "user.cfg":
             return 2
-        gamecfg.apply(path, with_actions="--with-actions" in argv)
+        gamecfg.apply(path)
         return 0
 
     if "--headless" in argv:

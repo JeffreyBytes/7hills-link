@@ -5,19 +5,11 @@ Independent of the window, so it can be tested and run headless.
 
 from __future__ import annotations
 
-import os
-import shutil
 import threading
 import time
 import webbrowser
-from pathlib import Path
 
-from . import __version__, api, detect, functions, gamecfg, leds, protoset, scbinds, virpil
-from .actions import GameActions
-from .bridge import Bridge, state_from_frame
-from .panel import PanelEngine
-from .panel_input import ButtonWatcher
-from .paths import data_dir, resource
+from . import __version__, api, detect, gamecfg, protoset
 from .stream import GameStream
 
 SEND_EVERY = 1.0        # seconds between uploads while frames arrive
@@ -54,7 +46,6 @@ class Core:
         self.env_ok = False
         self.needs_restart = False
         self.stream: GameStream | None = None
-        self.actions: GameActions | None = None
         self.stream_exe: str | None = None
         self.proto_error: str | None = None
         self.token = api.load_token()
@@ -68,16 +59,6 @@ class Core:
         self.uploads = 0
         self._last_settings = 0.0
         self._stop = threading.Event()
-        self.buttons = ButtonWatcher()
-        self.panel = PanelEngine(lambda: state_from_frame(self.latest_frame()),
-                                 lambda: self.actions if self.stream and self.stream.connected else None,
-                                 self.led_tool)
-        self.buttons.listeners.append(self.panel.on_button)
-        self._binds: tuple[float, dict] = (0.0, {})
-        self.led_result: dict | None = None
-        self.virpil: list[dict] = []
-        self.virpil_error: str | None = None
-        self.bridge = Bridge(self.latest_frame, lambda: self.actions if self.stream and self.stream.connected else None, self.virpil_view)
 
     # ---------------------------------------------------------------- setup
 
@@ -91,8 +72,7 @@ class Core:
                 self.channel = running
             elif self.channel not in names:
                 self.channel = "LIVE" if "LIVE" in names else (names[0] if names else None)
-            acts = self.bridge.cfg.enabled or bool(self.panel.cfg.mappings)
-            self.cfg_state = {i.channel: {"missing": gamecfg.missing(i.user_cfg, acts), "path": str(i.user_cfg)} for i in installs}
+            self.cfg_state = {i.channel: {"missing": gamecfg.missing(i.user_cfg), "path": str(i.user_cfg)} for i in installs}
             self.env_ok = gamecfg.env_enabled()
 
     def current(self) -> detect.Install | None:
@@ -107,13 +87,12 @@ class Core:
     def enable_telemetry(self) -> dict:
         """Write user.cfg for every install found, and the user environment variable."""
         result = {"changed": [], "needs_admin": [], "errors": []}
-        acts = self.bridge.cfg.enabled or bool(self.panel.cfg.mappings)
         for inst in self.installs:
             try:
-                if gamecfg.apply(inst.user_cfg, acts):
+                if gamecfg.apply(inst.user_cfg):
                     result["changed"].append(inst.channel)
             except gamecfg.NeedsAdmin:
-                if gamecfg.apply_elevated(inst.user_cfg, acts):
+                if gamecfg.apply_elevated(inst.user_cfg):
                     result["needs_admin"].append(inst.channel)
                 else:
                     result["errors"].append(inst.channel + ": no permission")
@@ -137,9 +116,6 @@ class Core:
         if self.stream:
             self.stream.stop()
             self.stream = None
-        if self.actions:
-            self.actions.close()
-            self.actions = None
         self.stream_exe = None
         if not inst:
             return
@@ -149,10 +125,8 @@ class Core:
         except Exception as e:
             self.proto_error = str(e)[:200]
             return
-        port = gamecfg.port_of(inst.user_cfg)
-        self.stream = GameStream(fds, port)
+        self.stream = GameStream(fds, gamecfg.port_of(inst.user_cfg))
         self.stream.start()
-        self.actions = GameActions(fds, port)
         self.stream_exe = str(inst.exe)
 
     def ensure_stream(self) -> None:
@@ -227,159 +201,11 @@ class Core:
                     self._lost_key()
         return self.status()
 
-    # ---------------------------------------------------------------- local bridge
-
-    def latest_frame(self) -> dict | None:
-        """Newest frame without draining the uploader's events."""
-        s = self.stream
-        if not s:
-            return None
-        with s._lock:
-            return s._frame
-
-    def set_bridge(self, enabled: bool) -> dict:
-        self.bridge.cfg.enabled = bool(enabled)
-        self.bridge.cfg.save()
-        if enabled:
-            self.bridge.start()
-        else:
-            self.bridge.stop()
-        self.scan()  # the actions line in user.cfg is now wanted (or not)
-        return self.status()
-
-    def scan_virpil(self) -> dict:
-        self.virpil, self.virpil_error = virpil.list_devices()
-        return self.status()
-
-    def set_virpil(self, device_id: str, selected: bool) -> dict:
-        ids = [x for x in self.bridge.cfg.virpil if x != device_id]
-        if selected:
-            ids.append(device_id)
-        self.bridge.cfg.virpil = ids[:32]
-        self.bridge.cfg.save()
-        return self.status()
-
-    def virpil_view(self) -> dict:
-        """Devices found now plus chosen ones that are not plugged in."""
-        chosen = set(self.bridge.cfg.virpil)
-        found = {d["id"] for d in self.virpil}
-        devices = [dict(d, selected=d["id"] in chosen, connected=True) for d in self.virpil]
-        devices += [{"id": i, "name": "Not connected", "selected": True, "connected": False} for i in self.bridge.cfg.virpil if i not in found]
-        return {"devices": devices, "error": self.virpil_error}
-
-    # ---------------------------------------------------------------- LED test
-
-    def led_tool(self) -> Path | None:
-        t = self.bridge.cfg.led_tool
-        if t and Path(t).exists():
-            return Path(t)
-        found = leds.find_tool()
-        if found:
-            self.bridge.cfg.led_tool = str(found)
-            self.bridge.cfg.save()
-        return found
-
-    def set_led_tool(self, path: str) -> dict:
-        p = Path(path)
-        if p.name.lower() == leds.TOOL_NAME.lower() and p.exists():
-            self.bridge.cfg.led_tool = str(p)
-            self.bridge.cfg.save()
-            self.led_result = None
-        else:
-            self.led_result = {"ok": False, "text": f"Choose {leds.TOOL_NAME}", "at": time.time()}
-        return self.status()
-
-    def led_test(self, device_id: str, number: int, color: str) -> dict:
-        ok, text = leds.run(self.led_tool(), device_id, int(number), color)
-        self.led_result = {"ok": ok, "text": text or (f"LED {number} set to #{''.join(leds.snap(color))}" if ok else "Failed"), "at": time.time()}
-        return self.status()
-
-    def led_reset(self, device_id: str) -> dict:
-        ok, text = leds.run(self.led_tool(), device_id, 0, "000000")
-        self.led_result = {"ok": ok, "text": text or ("Device LEDs back to its own profile" if ok else "Failed"), "at": time.time()}
-        return self.status()
-
-    # ---------------------------------------------------------------- panel setup
-
-    def game_bindings(self) -> dict:
-        """Star Citizen's joystick bindings for the current channel, re-read every 20 s."""
-        t, b = self._binds
-        inst = self.current()
-        if inst and time.time() - t > 20:
-            b = scbinds.bindings(inst.folder)
-            self._binds = (time.time(), b)
-        return b
-
-    def panel_save(self, mapping: dict) -> dict:
-        try:
-            self.panel.save_mapping(mapping)
-            self.led_result = None
-        except ValueError as e:
-            self.led_result = {"ok": False, "text": str(e), "at": time.time()}
-        self.scan()  # the actions line in user.cfg is now wanted
-        return self.status()
-
-    def set_joysticks(self, on: bool) -> dict:
-        """Joysticks & panels on/off: reading buttons, panel setup and Virpil LEDs."""
-        self.panel.cfg.enabled = bool(on)
-        self.panel.cfg.save()
-        if on:
-            self.buttons.start()
-        else:
-            self.buttons.stop()
-            self.panel.cancel_learn()
-        return self.status()
-
-    def panel_view(self) -> dict:
-        v = self.panel.status()
-        binds = self.game_bindings()
-        cat = {f["id"]: f for f in functions.catalog()}
-        for m in v["mappings"]:
-            m["label"] = cat.get(m["function"], {}).get("label", m["function"])
-            m["in_game"] = binds.get(m.get("device_id") or "", {}).get(m.get("button") or -1, [])
-        if v["learn"] and not v["learn"].get("waiting"):
-            l = dict(v["learn"])
-            l["in_game"] = binds.get(l.get("device_id") or "", {}).get(l.get("button") or -1, [])
-            v["learn"] = l
-        return v
-
-    def set_bridge_risky(self, allow: bool) -> dict:
-        self.bridge.cfg.allow_risky = bool(allow)
-        self.bridge.cfg.save()
-        return self.status()
-
-    def new_bridge_key(self) -> dict:
-        self.bridge.cfg.new_key()
-        return self.status()
-
-    def gremlin_folder(self) -> Path:
-        """Copy the bundled Joystick Gremlin plugin to a folder the user can open."""
-        dest = data_dir() / "joystick-gremlin"
-        dest.mkdir(parents=True, exist_ok=True)
-        src = resource("integrations", "joystick_gremlin", "7hills_action.py")
-        if src.exists():
-            shutil.copyfile(src, dest / src.name)
-        return dest
-
-    def open_gremlin_folder(self) -> None:
-        folder = self.gremlin_folder()
-        if os.name == "nt":
-            os.startfile(folder)  # type: ignore[attr-defined]
-        else:
-            webbrowser.open(folder.as_uri())
-
     # ---------------------------------------------------------------- upload loop
 
     def run(self) -> None:
         self.scan()
         self.ensure_stream()
-        if self.bridge.cfg.enabled:
-            self.bridge.start()
-        self.scan_virpil()
-        if self.panel.cfg.enabled:
-            self.buttons.start()
-        self.panel.start()
-        self.led_tool()
         self.refresh_settings(force=True)
         last_sent_frame_at = 0.0
         last_scan = time.time()
@@ -408,9 +234,6 @@ class Core:
 
     def stop(self) -> None:
         self._stop.set()
-        self.bridge.stop()
-        self.buttons.stop()
-        self.panel.stop()
         if self.stream:
             self.stream.stop()
 
@@ -446,9 +269,4 @@ class Core:
                 "last_upload_ago": round(time.time() - self.last_upload, 1) if self.last_upload else None,
                 "upload_error": self.upload_error,
                 "now": _summary(frame),
-                "bridge": self.bridge.status(),
-                "virpil": self.virpil_view(),
-                "panel": self.buttons.status(),
-                "panel_setup": self.panel_view(),
-                "leds": {"tool": self.bridge.cfg.led_tool, "result": self.led_result},
             }

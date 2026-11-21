@@ -48,10 +48,6 @@
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--mute); cursor: pointer; font: inherit; font-size: 12px; }
   .chip.on { border-color: var(--gold); color: var(--text); background: rgba(240,180,67,.12); }
-  .pal { display: grid; grid-template-columns: repeat(16, 18px); gap: 4px; }
-  .pal span { width: 18px; height: 18px; border-radius: 4px; cursor: pointer; border: 1px solid var(--line); }
-  .pal span.on { outline: 2px solid var(--gold); outline-offset: 1px; }
-  .inp { background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px; }
   .hidden { display: none !important; }
   .err { color: var(--crit); font-size: 13px; }
 </style>
@@ -100,7 +96,7 @@
 
       <div class="card warn hidden" id="cfgCard">
         <h2 style="font-size:20px">Switch on game telemetry</h2>
-        <p class="muted" style="margin:6px 0 12px">Adds the telemetry lines to the game's <span class="mono">user.cfg</span> for each install found and sets one Windows setting for your user. Nothing else is changed. Windows may ask for permission if the game is under Program Files.</p>
+        <p class="muted" style="margin:6px 0 12px">Adds three lines to the game's <span class="mono">user.cfg</span> for each install found and sets one Windows setting for your user. Nothing else is changed. Windows may ask for permission if the game is under Program Files.</p>
         <button class="btn" onclick="enableTelemetry()">Switch on</button>
         <p class="err" id="cfgErr"></p>
       </div>
@@ -129,109 +125,6 @@
           <label><input type="checkbox" id="optVitals" onchange="share({share_vitals:this.checked})"> Health &amp; vitals</label>
           <label><input type="checkbox" id="optUec" onchange="share({share_uec:this.checked})"> aUEC balance</label>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="row">
-          <div class="grow"><div style="font-weight:600;font-size:15px">Local bridge <span class="dim" style="font-weight:400;font-size:12px">· button boxes &amp; panels</span></div>
-            <div class="muted" style="font-size:13px">Lets Joystick Gremlin, LED tools and other programs on this PC read your ship state and send game actions. Nothing goes over the network.</div></div>
-          <div class="seg" id="bridgeSeg" role="radiogroup" aria-label="Local bridge">
-            <button type="button" role="radio" data-on="0" onclick="setBridge(false)">Off</button>
-            <button type="button" role="radio" data-on="1" onclick="setBridge(true)">On</button>
-          </div>
-        </div>
-        <div class="hidden" id="bridgeOpts" style="padding-top:12px;margin-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px">
-          <div class="row" style="font-size:13px">
-            <span class="mono" id="bridgeAddr"></span>
-            <span class="dim">key</span><span class="mono" id="bridgeKey">••••••••</span>
-            <button class="link" onclick="toggleKey()" id="keyShowBtn">Show</button>
-            <button class="link" onclick="copyKey()">Copy</button>
-            <button class="link" style="color:var(--dim)" onclick="if(confirm('Make a new key? Tools using the old key stop working.')) call('new_bridge_key')">New key</button>
-          </div>
-          <label style="display:flex;gap:10px;align-items:center;font-size:13px;cursor:pointer"><input type="checkbox" id="optRisky" style="accent-color:var(--gold)" onchange="call('set_bridge_risky', this.checked)"> Allow risky actions <span class="dim">(self-destruct, eject, door locks)</span></label>
-          <div class="row" style="font-size:13px">
-            <span class="dim grow" id="bridgeLast">No actions sent yet.</span>
-            <button class="btn outline small" onclick="api('open_gremlin_folder')">Joystick Gremlin plugin</button>
-          </div>
-          <p class="err" id="bridgeErr" style="margin:0"></p>
-        </div>
-      </div>
-
-      <div class="card row">
-        <div class="grow"><div style="font-weight:600;font-size:15px">Joysticks &amp; panels</div>
-          <div class="muted" style="font-size:13px">Read your sticks and panels, let buttons control the ship and Virpil LEDs show its state. Off: 7Hills Link leaves your devices alone.</div></div>
-        <div class="seg" id="joySeg">
-          <button type="button" data-on="0" onclick="call('set_joysticks', false)">Off</button>
-          <button type="button" data-on="1" onclick="call('set_joysticks', true)">On</button>
-        </div>
-      </div>
-
-      <div class="card" style="display:flex;flex-direction:column;gap:12px" id="setupCard">
-        <div class="row">
-          <div class="grow"><div style="font-weight:600;font-size:15px">Panel setup <span class="dim" style="font-weight:400;font-size:12px">· buttons do things, LEDs show the ship</span></div>
-            <div class="muted" style="font-size:13px">Press a button on your panel, pick what it does and its colours. The LED follows the game, also when someone else in the crew changes it.</div></div>
-          <div class="seg" id="panelSeg">
-            <button type="button" data-on="0" onclick="call('panel_active', false)">Paused</button>
-            <button type="button" data-on="1" onclick="call('panel_active', true)">Active</button>
-          </div>
-        </div>
-        <div class="row" style="gap:10px">
-          <button class="btn small" onclick="startLearn()">Add button</button>
-          <button class="btn outline small" onclick="startLedOnly()">Add LED only</button>
-          <span class="dim grow" style="font-size:12px" id="panelLog"></span>
-        </div>
-
-        <div class="hidden" id="editor" style="background:var(--bg2);border:1px solid rgba(240,180,67,.35);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px">
-          <div id="edWait" class="row"><span class="display grow" style="font-size:18px">Press the button on your panel…</span><button class="link" onclick="cancelEd()">Cancel</button></div>
-          <div id="edBody" class="hidden" style="display:flex;flex-direction:column;gap:10px">
-            <div class="row"><span class="display grow" style="font-size:18px" id="edTitle"></span><button class="link" style="color:var(--dim)" onclick="cancelEd()">Cancel</button></div>
-            <div id="edDevRow" class="row hidden" style="font-size:13px"><span class="dim" style="width:110px">Device</span><select class="inp" id="edDev" onchange="ed.device_id=this.value;ed.device_name=this.options[this.selectedIndex].text"></select></div>
-            <div class="err hidden" id="edWarn" style="font-size:12px"></div>
-            <div class="row" style="font-size:13px"><span class="dim" style="width:110px">What it does</span><select class="inp grow" id="edFn" onchange="pickFn(this.value)"></select></div>
-            <div class="row hidden" id="edModeRow" style="font-size:13px"><span class="dim" style="width:110px">Button type</span>
-              <select class="inp" id="edMode" onchange="ed.mode=this.value;drawEd()"><option value="button">Push button: flips it, always in step with the game</option><option value="switch">Switch / lever: on when pressed, off when released</option></select>
-              <label id="edRevLbl" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="edRev" style="accent-color:var(--gold)" onchange="ed.reverse=this.checked"> Reverse</label></div>
-            <div class="dim" style="font-size:12px" id="edNote"></div>
-            <div class="row" style="font-size:13px;flex-wrap:wrap"><span class="dim" style="width:110px">LED</span>
-              <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="edHasLed" style="accent-color:var(--gold)" onchange="ed.led=this.checked?(parseInt($('edLed').value)||1):null;drawEd()"> Has an LED</label>
-              <span id="edLedCtl" style="display:flex;gap:8px;align-items:center"><span class="dim">number</span><input class="inp" id="edLed" type="number" min="1" max="255" style="width:64px" onchange="ed.led=parseInt(this.value)||1">
-              <button class="btn outline small" onclick="edLight(0)">Light</button><button class="btn outline small" onclick="edLight(1)">Next</button><span class="dim" style="font-size:12px">Is the right LED lit? Then keep this number.</span></span></div>
-            <div class="row" style="font-size:13px"><span class="dim" style="width:110px">Right now</span><b style="font-weight:600" id="edNow">—</b></div>
-            <div class="row" style="font-size:13px;flex-wrap:wrap;align-items:flex-start"><span class="dim" style="width:110px;padding-top:6px">LED colour when</span>
-              <span id="edColors" style="display:flex;gap:6px;flex-wrap:wrap"></span></div>
-            <div class="row hidden" id="edBlinkRow" style="font-size:13px"><span style="width:110px"></span><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="edBlink" style="accent-color:var(--gold)" onchange="ed.blink_moving=this.checked"> Blink while moving</label></div>
-            <div class="dim" style="font-size:12px">Click a state above, then a colour below. The LED shows the colour right away.</div>
-            <div class="pal" id="edPal"></div>
-            <div class="row"><button class="btn small" onclick="saveEd()">Save</button><span class="err" id="edErr" style="font-size:13px"></span></div>
-          </div>
-        </div>
-
-        <div id="mapList" style="display:flex;flex-direction:column;font-size:13px"></div>
-          <div style="border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px">
-            <div class="row" style="font-size:13px"><span class="grow"><b>Virpil devices</b> <span class="dim">· devices found on this PC</span></span>
-              <button class="link" onclick="call('scan_virpil')">Scan again</button></div>
-            <div id="virpilList" style="display:flex;flex-direction:column;gap:6px;font-size:13px"></div>
-          </div>
-      </div>
-
-      <div class="card" style="display:flex;flex-direction:column;gap:12px" id="testCard">
-        <div><div style="font-weight:600;font-size:15px">Panel test <span class="dim" style="font-weight:400;font-size:12px">· find your buttons and LEDs</span></div>
-          <div class="muted" style="font-size:13px">Press a button on a stick or panel to see its number. Light an LED by number to find which one it is.</div></div>
-        <div class="row" style="background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px">
-          <div class="grow"><div class="label">Last button</div><div class="display" style="font-size:20px;font-weight:600" id="lastPress">Press any button…</div></div>
-          <div class="dim mono" style="font-size:11px;text-align:right" id="recentPress"></div>
-        </div>
-        <div class="row" style="flex-wrap:wrap;font-size:13px">
-          <select class="inp" id="ledDev" style="min-width:200px"></select>
-          <span class="dim">LED number</span><input class="inp" id="ledNum" type="number" min="0" max="255" value="1" style="width:70px">
-          <span id="ledSw" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:#00FF00;display:inline-block"></span>
-          <button class="btn small" onclick="ledLight()">Light it</button>
-          <button class="btn outline small" onclick="ledNext()">Next number</button>
-          <button class="link" style="color:var(--dim)" onclick="ledReset()">Reset device</button>
-        </div>
-        <div class="pal" id="ledPal"></div>
-        <div style="font-size:13px" id="ledResult"></div>
-        <div class="dim" style="font-size:12px"><span id="ledTool"></span> <button class="link" onclick="call('browse_led_tool')">Choose file…</button></div>
       </div>
 
       <div class="card row">
@@ -271,128 +164,6 @@
   function modeOf(st) { return st ? (st.share_mode || (st.share_org ? 'full' : 'online')) : 'online' }
   function setMode(m) { if (modeOf(S && S.settings) !== m) share({ share_mode: m }) }
 
-  let keyShown = false, copiedAt = 0, lastVirpil = null, lastDevs = null, ledColor = '00FF00'
-  const LV = ['00', '40', '80', 'FF']
-  function ledPalette() {
-    const cols = []; for (const r of LV) for (const g of LV) for (const b of LV) cols.push(r + g + b)
-    $('ledPal').innerHTML = cols.map(c => '<span title="#' + c + '" data-c="' + c + '" style="background:#' + c + '"></span>').join('')
-    document.querySelectorAll('#ledPal span').forEach(x => x.onclick = () => { ledColor = x.dataset.c; $('ledSw').style.background = '#' + ledColor; markPal(); ledLight() })
-    markPal()
-  }
-  function markPal() { document.querySelectorAll('#ledPal span').forEach(x => x.classList.toggle('on', x.dataset.c === ledColor)) }
-  function ledDev() { return $('ledDev').value }
-  function ledNum() { return Math.max(0, Math.min(255, parseInt($('ledNum').value || '0', 10))) }
-  function ledLight() { if (ledDev()) call('led_test', ledDev(), ledNum(), ledColor) }
-  function ledNext() { $('ledNum').value = ledNum() + 1; ledLight() }
-  function ledReset() { if (ledDev()) call('led_reset', ledDev()) }
-
-  // ---------------- panel setup
-  let CAT = [], ed = null, palTarget = 'on', lastMaps = null
-  const fnById = id => CAT.find(f => f.id === id)
-  function startLearn() { ed = null; call('panel_learn') }
-  function startLedOnly() {
-    const devs = (S && S.virpil && S.virpil.devices || []).filter(d => d.connected)
-    const first = CAT.find(f => f.kind === 'led')
-    ed = { ledOnly: true, device_id: devs[0] ? devs[0].id : '', device_name: devs[0] ? devs[0].name : '', button: null, function: first.id, mode: 'button', led: 1, on_color: first.on_color, off_color: first.off_color }
-    openEd()
-  }
-  function editMap(id) {
-    const m = (S.panel_setup.mappings || []).find(x => x.id === id); if (!m) return
-    ed = Object.assign({ ledOnly: m.button === null }, m); openEd()
-  }
-  function cancelEd() { ed = null; call('panel_cancel'); show('editor', false) }
-  function openEd() {
-    show('editor', true); show('edWait', false); show('edBody', true); $('edErr').textContent = ''
-    const fns = CAT.filter(f => ed.ledOnly ? f.kind === 'led' : f.kind !== 'led')
-    const groups = [...new Set(fns.map(f => f.group))]
-    $('edFn').innerHTML = groups.map(g => '<optgroup label="' + esc(g) + '">' + fns.filter(f => f.group === g).map(f => '<option value="' + f.id + '">' + esc(f.label) + '</option>').join('') + '</optgroup>').join('')
-    if (!ed.function || !fns.some(f => f.id === ed.function)) pickFn(fns[0].id, true)
-    $('edFn').value = ed.function
-    const devs = (S.virpil && S.virpil.devices || []).filter(d => d.connected)
-    $('edDev').innerHTML = devs.map(d => '<option value="' + esc(d.id) + '">' + esc(d.name) + '</option>').join('') || '<option value="">No Virpil device found</option>'
-    if (ed.device_id) $('edDev').value = devs.find(d => d.id.startsWith(ed.device_id)) ? devs.find(d => d.id.startsWith(ed.device_id)).id : ''
-    const pal = []; for (const r of LV) for (const g of LV) for (const b of LV) pal.push(r + g + b)
-    $('edPal').innerHTML = pal.map(c => '<span data-c="' + c + '" style="background:#' + c + '"></span>').join('')
-    document.querySelectorAll('#edPal span').forEach(x => x.onclick = () => { ed[palTarget + '_color'] = x.dataset.c; drawEd(); if (ed.led) edLight(0, x.dataset.c) })
-    drawEd()
-  }
-  function pickFn(id, silent) {
-    const f = fnById(id); if (!f) return
-    ed.function = id; ed.on_color = f.on_color; ed.off_color = f.off_color; ed.moving_color = f.moving_color || 'FF8000'; ed.idle_color = '000000' 
-    if (!f.has_on_off) ed.mode = 'button'
-    if (!silent) drawEd()
-  }
-  function drawEd() {
-    if (!ed) return
-    const f = fnById(ed.function) || {}
-    $('edTitle').textContent = ed.ledOnly ? 'LED only' : (ed.device_name || 'Device') + ' · button ' + ed.button
-    show('edDevRow', !!ed.ledOnly)
-    show('edModeRow', !!f.has_on_off && !f.risky)
-    $('edMode').value = ed.mode || 'button'
-    $('edNote').textContent = (f.risky ? 'Hold the button for 1 second to use it. ' : '') + (f.note || '') + (f.has_state ? '' : (f.kind === 'led' ? '' : ' The LED flashes when it sends.'))
-    $('edHasLed').checked = !!ed.led; $('edHasLed').disabled = !!ed.ledOnly
-    $('edLedCtl').style.display = ed.led ? 'flex' : 'none'
-    if (ed.led) $('edLed').value = ed.led
-    const states = [['on', f.on_label || 'On'], ['off', f.off_label || 'Off']]
-    if (f.moves) states.push(['moving', 'Moving'])
-    if (f.has_state) states.push(['idle', 'Not in a ship'])
-    if (!states.some(x => x[0] === palTarget)) palTarget = 'on'
-    for (const [k] of states) if (!ed[k + '_color']) ed[k + '_color'] = k === 'moving' ? 'FF8000' : '000000'
-    $('edColors').innerHTML = states.map(([k, lbl]) => '<button class="chip' + (palTarget === k ? ' on' : '') + '" onclick="palTarget=\'' + k + '\';drawEd()"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;border:1px solid var(--line);background:#' + ed[k + '_color'] + '"></span> ' + esc(lbl) + '</button>').join('')
-    show('edBlinkRow', !!f.moves); $('edBlink').checked = ed.blink_moving !== false
-    $('edRevLbl').style.display = ed.mode === 'switch' ? 'flex' : 'none'; $('edRev').checked = !!ed.reverse
-    document.querySelectorAll('#edPal span').forEach(x => x.classList.toggle('on', x.dataset.c === ed[palTarget + '_color']))
-  }
-  function edDevice() { return ed.ledOnly ? $('edDev').value : ed.device_id }
-  function edLight(step, color) {
-    if (step) { ed.led = (parseInt($('edLed').value) || 0) + 1; $('edLed').value = ed.led }
-    ed.led = parseInt($('edLed').value) || 1
-    if (edDevice()) call('led_test', edDevice(), ed.led, color || ed.on_color)
-  }
-  async function saveEd() {
-    if (ed.ledOnly) { ed.device_id = $('edDev').value; ed.device_name = $('edDev').options[$('edDev').selectedIndex] ? $('edDev').options[$('edDev').selectedIndex].text : '' }
-    const body = Object.assign({}, ed); delete body.ledOnly
-    const s = await api('panel_save', body)
-    if (s) { render(s); if (s.leds && s.leds.result && !s.leds.result.ok && Date.now() / 1000 - s.leds.result.at < 2) { $('edErr').textContent = s.leds.result.text } else { ed = null; show('editor', false) } }
-  }
-  function drawPanel(s) {
-    const ps = s.panel_setup || {}
-    document.querySelectorAll('#joySeg button').forEach(x => x.classList.toggle('on', (x.dataset.on === '1') === !!ps.enabled))
-    show('setupCard', !!ps.enabled); show('testCard', !!ps.enabled)
-    document.querySelectorAll('#panelSeg button').forEach(x => x.classList.toggle('on', (x.dataset.on === '1') === !!ps.active))
-    const l = ps.learn
-    if (l && l.waiting) { show('editor', true); show('edWait', true); show('edBody', false) }
-    else if (l && !l.waiting && !ed) {
-      const ex = l.existing
-      ed = ex ? Object.assign({ ledOnly: false }, ex) : { ledOnly: false, device_id: l.device_id, device_name: l.device_name, button: l.button, function: null, mode: 'button', led: l.button, on_color: '00FF00', off_color: 'FF0000' }
-      openEd()
-      ed.in_game = l.in_game
-    }
-    if (ed && ed.in_game && ed.in_game.length) { $('edWarn').textContent = 'In Star Citizen this button already does: ' + ed.in_game.join(', ') + '. Clear that binding in the game, or one press will do both.'; show('edWarn', true) } else show('edWarn', false)
-    const maps = ps.mappings || []
-    const key = JSON.stringify(maps)
-    if (key !== lastMaps) {
-      lastMaps = key
-      $('mapList').innerHTML = maps.length ? maps.map(m => '<div class="row" style="padding:8px 0;border-top:1px solid var(--line)">' +
-        '<span style="width:170px" class="dim">' + esc(m.button === null ? (m.device_name || 'LED') : (m.device_name || m.device_id) + ' · ' + m.button) + '</span>' +
-        '<span class="grow"><b style="font-weight:600">' + esc(m.label) + '</b>' + (m.now && m.now.label ? ' <span class="dim">· now: ' + esc(m.now.label) + '</span>' : '') + (m.mode === 'switch' ? ' <span class="dim">· switch</span>' : '') + (m.in_game && m.in_game.length ? ' <span style="color:var(--warn)" title="' + esc(m.in_game.join(', ')) + '">· also bound in game</span>' : '') + '</span>' +
-        '<span class="dim mono" style="font-size:11px">' + (m.led ? 'LED ' + m.led : 'no LED') + '</span>' +
-        '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#' + m.on_color + '"></span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#' + m.off_color + '"></span>' +
-        '<button class="link" onclick="editMap(\'' + m.id + '\')">Edit</button><button class="link" style="color:var(--dim)" onclick="if(confirm(\'Remove this mapping?\')) call(\'panel_delete\',\'' + m.id + '\')">Remove</button></div>').join('')
-        : '<span class="dim" style="font-size:13px">Nothing set up yet. Press Add button and then a button on your panel.</span>'
-    }
-    if (ed && !$('edBody').classList.contains('hidden')) api('panel_now', ed.function).then(n => { $('edNow').textContent = (n && n.label) || '—' })
-    const lg = (ps.log || [])[0]
-    $('panelLog').textContent = ps.led_error ? 'LED: ' + ps.led_error : lg ? 'Sent ' + lg.action + (lg.ok ? '' : ' · ' + lg.error) : ''
-  }
-  function setBridge(on) { if (!!(S && S.bridge && S.bridge.enabled) !== on) call('set_bridge', on) }
-  function toggleKey() { keyShown = !keyShown; if (S) render(S) }
-  async function copyKey() {
-    const k = S && S.bridge ? S.bridge.key : ''
-    try { await navigator.clipboard.writeText(k); copiedAt = Date.now() }
-    catch (e) { keyShown = true; render(S) }
-  }
-
   function render(s) {
     S = s
     $('ver').textContent = 'v' + s.version
@@ -431,51 +202,13 @@
     $('optVitals').checked = !!(s.settings && s.settings.share_vitals)
     $('optUec').checked = !!(s.settings && s.settings.share_uec)
 
-    const b = s.bridge || {}
-    document.querySelectorAll('#bridgeSeg button').forEach(x => {
-      const on = (x.dataset.on === '1') === !!b.enabled
-      x.classList.toggle('on', on); x.setAttribute('aria-checked', on ? 'true' : 'false')
-    })
-    show('bridgeOpts', !!b.enabled)
-    $('bridgeAddr').textContent = '127.0.0.1:' + (b.port || 50052)
-    $('bridgeKey').textContent = keyShown ? (b.key || '') : '••••••••'
-    $('keyShowBtn').textContent = keyShown ? 'Hide' : 'Show'
-    $('optRisky').checked = !!b.allow_risky
-    const l = b.last
-    $('bridgeLast').textContent = Date.now() - copiedAt < 2500 ? 'Key copied.' : l ? 'Last: ' + l.action + ' · ' + l.ago + ' s ago' + (l.ok ? '' : ' · ' + l.error) : 'No actions sent yet.'
-    $('bridgeErr').textContent = b.error || (b.enabled && s.cfg_missing && s.cfg_missing.indexOf('server.game.telemetry.trigger.actions.enabled') >= 0 ? 'Press Switch on above and restart the game so it accepts actions.' : '')
-
-    const v = s.virpil || { devices: [] }
-    const vHtml = v.devices.length
-      ? v.devices.map(d => '<label style="display:flex;gap:10px;align-items:center;cursor:pointer"><input type="checkbox" style="accent-color:var(--gold)" ' + (d.selected ? 'checked ' : '') + 'onchange="call(\'set_virpil\',\'' + esc(d.id) + '\',this.checked)"> <span' + (d.connected ? '' : ' class="dim"') + '>' + esc(d.name) + '</span> <span class="dim mono" style="font-size:11px">' + esc(d.id) + '</span></label>').join('')
-      : '<span class="dim">' + esc(v.error || 'No Virpil devices found. Plug them in and press Scan again.') + '</span>'
-    if (lastVirpil !== vHtml) { $('virpilList').innerHTML = vHtml; lastVirpil = vHtml }
-
-    drawPanel(s)
-    const pn = s.panel || {}
-    const lp = pn.last
-    $('lastPress').textContent = lp ? lp.device + ' · button ' + lp.button + (lp.pressed ? '' : ' (released)') : (pn.error || 'Press any button…')
-    $('recentPress').innerHTML = (pn.recent || []).filter(p => p.pressed).slice(0, 4).map(p => esc(p.device + ' #' + p.button + ' · ' + p.ago + 's')).join('<br>')
-    const devs = (s.virpil && s.virpil.devices || []).filter(d => d.connected)
-    const devKey = JSON.stringify(devs.map(d => d.id))
-    if (devKey !== lastDevs) {
-      const keep = ledDev()
-      $('ledDev').innerHTML = devs.length ? devs.map(d => '<option value="' + esc(d.id) + '">' + esc(d.name) + '</option>').join('') : '<option value="">No Virpil device found</option>'
-      if (keep && devs.some(d => d.id === keep)) $('ledDev').value = keep
-      lastDevs = devKey
-    }
-    const lr = s.leds || {}
-    $('ledResult').innerHTML = lr.result ? '<span style="color:' + (lr.result.ok ? 'var(--ok)' : 'var(--crit)') + '">' + esc(lr.result.text) + '</span>' : ''
-    $('ledTool').textContent = lr.tool ? 'LED tool: ' + lr.tool : 'VPC_LED_Control.exe not found (it comes with Virpil\'s VPC Software Suite).'
-
     $('channels').innerHTML = s.installs.map(i => '<button class="chip' + (i.channel === s.channel ? ' on' : '') + '" onclick="call(\'set_channel\',\'' + esc(i.channel) + '\')">' + esc(i.channel) + '</button>').join('') || '<span class="dim">none</span>'
     show('unlinkBtn', s.linked)
     $('footer').textContent = s.linked ? 'Opens your dashboard at 7hills.space/live' : ''
   }
 
   async function tick() { try { const s = await api('status'); if (s) render(s) } catch (e) {} }
-  ledPalette()
-  window.addEventListener('pywebviewready', async () => { CAT = (await api('panel_catalog')) || []; tick(); setInterval(tick, 500) })
+  window.addEventListener('pywebviewready', () => { tick(); setInterval(tick, 1000) })
 </script>
 </body>
 </html>

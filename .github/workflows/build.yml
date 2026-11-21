@@ -40,10 +40,8 @@ jobs:
           --name 7HillsLink
           --paths src
           --add-data "src/sevenhills_link/ui;sevenhills_link/ui"
-          --add-data "src/sevenhills_link/integrations;sevenhills_link/integrations"
           --collect-submodules sevenhills_link
           --hidden-import keyring.backends.Windows
-          --hidden-import hid
           run_client.py
       - name: Smoke test
         shell: pwsh

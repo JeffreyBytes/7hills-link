@@ -18,8 +18,6 @@ WANTED = {
     "grpc.client.server.port": str(DEFAULT_PORT),
     "server.game.telemetry.enabled": "1",
 }
-# Needed only when the local bridge sends actions to the game.
-ACTIONS_KEY = "server.game.telemetry.trigger.actions.enabled"
 ENV_NAME = "GRPC_CLIENT_SERVER_ENABLED"
 
 _LINE = re.compile(r"^\s*([A-Za-z0-9_.\-]+)\s*=?\s*(.*?)\s*$")
@@ -52,12 +50,11 @@ def port_of(path: Path) -> int:
         return DEFAULT_PORT
 
 
-def missing(path: Path, with_actions: bool = False) -> dict[str, str]:
-    """Settings that are absent or set to something else (plus the actions switch when asked)."""
+def missing(path: Path) -> dict[str, str]:
+    """Settings that are absent or set to something else."""
     cur = read_cfg(path)
     out = {}
-    wanted = dict(WANTED, **({ACTIONS_KEY: "1"} if with_actions else {}))
-    for k, v in wanted.items():
+    for k, v in WANTED.items():
         if k == "grpc.client.server.port":
             if k not in cur:  # any port the player chose is fine
                 out[k] = v
@@ -88,9 +85,9 @@ def patched_text(text: str, changes: dict[str, str]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def apply(path: Path, with_actions: bool = False) -> bool:
+def apply(path: Path) -> bool:
     """Write the missing settings. True if the file changed. Raises NeedsAdmin when not allowed."""
-    changes = missing(path, with_actions)
+    changes = missing(path)
     if not changes:
         return False
     old = path.read_text(encoding="utf-8", errors="ignore") if path.exists() else ""
@@ -101,7 +98,7 @@ def apply(path: Path, with_actions: bool = False) -> bool:
     return True
 
 
-def apply_elevated(path: Path, with_actions: bool = False) -> bool:
+def apply_elevated(path: Path) -> bool:
     """Ask Windows (UAC) to run this program again as administrator just to write user.cfg."""
     if os.name != "nt":
         return False
@@ -110,8 +107,6 @@ def apply_elevated(path: Path, with_actions: bool = False) -> bool:
         exe, args = sys.executable, f'--write-cfg "{path}"'
     else:
         exe, args = sys.executable, f'-m sevenhills_link --write-cfg "{path}"'
-    if with_actions:
-        args += " --with-actions"
     rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, args, None, 0)
     return rc > 32
 
