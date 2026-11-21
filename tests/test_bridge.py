@@ -194,3 +194,21 @@ def test_virpil_devices_grouped(monkeypatch, tmp_path: Path):
 
     monkeypatch.setattr(virpil, "_hid", lambda: None)
     assert virpil.list_devices()[0] == [] and virpil.list_devices()[1]
+
+
+def test_game_failed_status_is_an_error(tmp_path, monkeypatch):
+    from sevenhills_link.actions import ActionError
+    fds = _fds()
+    f = fds.file[0]
+    resp = next(m for m in f.message_type if m.name == "TriggerGameActionResponse")
+    resp.field.add(name="status", number=1, type=9, label=1)
+    received = []
+    game, gport = _game(fds, received)
+    acts = GameActions(fds, gport)
+    import pytest
+    # The fake game returns an empty status: treated as OK.
+    assert acts.trigger("v_vtol_on") == {"status": ""}
+    monkeypatch.setattr("sevenhills_link.actions.to_dict", lambda m: {"status": "TRIGGER_GAME_ACTION_STATUS_FAILED"})
+    with pytest.raises(ActionError, match="FAILED"):
+        acts.trigger("v_open_all_doors")
+    acts.close(); game.stop(0)

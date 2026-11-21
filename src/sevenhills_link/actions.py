@@ -70,9 +70,16 @@ class GameActions:
         if hold_ms and "hold_ms" in fields:
             req.hold_ms = int(hold_ms)
         try:
-            return to_dict(call(req, timeout=3))
+            resp = to_dict(call(req, timeout=3))
         except grpc.RpcError as e:
             raise ActionError(_rpc_text(e)) from e
+        # The game answers every call; its status says whether it did anything.
+        status = str(resp.get("status") or "")
+        if status and not status.endswith("_OK"):
+            short = status.replace("TRIGGER_GAME_ACTION_STATUS_", "")
+            msg = resp.get("message") or ""
+            raise ActionError(f"Game said {short}" + (f": {msg}" if msg else " (not possible right now, e.g. wrong seat or ship)"))
+        return resp
 
     def close(self) -> None:
         with self._lock:
