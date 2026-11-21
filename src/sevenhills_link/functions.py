@@ -125,9 +125,9 @@ FUNCTIONS: list[Function] = [
     # Ship
     Function("flightready", "Ship", "Flight ready", "action", toggle="v_flightready", state=_flight_ready, on_color=GREEN, off_color=AMBER, on_label="Ready", off_label="Not ready"),
     Function("lights", "Ship", "Lights", "state", "v_lights_on", "v_lights_off", "v_lights", _flag("lights"), WHITE, DIM),
-    Function("doors_open", "Ship", "Open / close all doors", "action", "v_open_all_doors", "v_close_all_doors", "v_toggle_all_doors", None, GREEN, DIM),
-    Function("doors_lock", "Ship", "Lock / unlock all doors", "action", "v_lock_all_doors", "v_unlock_all_doors", "v_toggle_all_doorlocks", None, RED, GREEN, on_label="Locked", off_label="Unlocked"),
-    Function("ports_lock", "Ship", "Lock / unlock ports", "action", "v_lock_all_ports", "v_unlock_all_ports", "v_toggle_all_portlocks", None, RED, GREEN, on_label="Locked", off_label="Unlocked"),
+    Function("doors_open", "Ship", "Open / close all doors", "action", "v_open_all_doors", "v_close_all_doors", "v_toggle_all_doors", None, GREEN, DIM, note="In testing (PTU, Nov 2026) the game answered FAILED for door actions from the pilot seat, also in ships with doors"),
+    Function("doors_lock", "Ship", "Lock / unlock all doors", "action", "v_lock_all_doors", "v_unlock_all_doors", "v_toggle_all_doorlocks", None, RED, GREEN, on_label="Locked", off_label="Unlocked", note="In testing (PTU, Nov 2026) the game answered FAILED for door actions from the pilot seat, also in ships with doors"),
+    Function("ports_lock", "Ship", "Lock / unlock ports", "action", "v_lock_all_ports", "v_unlock_all_ports", "v_toggle_all_portlocks", None, RED, GREEN, on_label="Locked", off_label="Unlocked", note="In testing (PTU, Nov 2026) the game answered FAILED for door actions from the pilot seat, also in ships with doors"),
     # Seat
     Function("nightvision", "Seat", "Night vision", "state", "v_light_amplification_on", "v_light_amplification_off", "v_light_amplification_toggle", _flag("flight_light_amplification", "ifcs"), GREEN, DIM),
     Function("mode_guns", "Seat", "Guns mode", "action", toggle="v_set_guns_mode", on_color=AMBER, off_color=DIM),
