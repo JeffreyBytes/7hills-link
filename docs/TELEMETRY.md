@@ -106,6 +106,12 @@ Paths below are protobuf field names as JSON (`preserving_proto_field_name`).
 - Quantum fuel has always read 0 for us so far.
 - While the ship sits still, G-load can read 0 and heading 360.
 - A drop in pressure while not in EVA is a reliable sign of decompression.
+- Gear and VTOL report `DEPLOYED` / `RETRACTED`, and `DEPLOYING` / `RETRACTING` while moving, so a panel can show the in-between state.
+- Annunciator keys seen: `pwr`, `wpn`, `thr`, `shld`, `cool`, `qdrv`, `radr`, `prox`, `hit`, `misl`. Their values are `nominal` or `off` normally, and `minor_on` / `major_on` when they light.
+- `power` has one flag per system: `powerplants`, `engines`, `weapons`, `coolers`, `life_support`, `sensors`, `shield_generators`, `shield_emitters`, `gravity_generators`.
+- The IFCS settings we have seen are `ifcs_spacebreak_enables_boost`, `course_prediction`, `ifcs_g_safe_disabled_by_boost`, `advanced_hud_enabled_scm`, `advanced_hud_enabled_nav`, `advanced_hud_labels` and `flight_light_amplification`. Decoupled mode, G-safe and proximity assist are not reported, so their state cannot be read.
+- Seat names look like `ANVL_Asgard_SCItem_Seat_Pilot_877602855924`, and the ship id like `ANVL_Asgard_877602855866`. Everyone seated in the same ship gets the same ship id.
+- When you leave the seat, the `vehicle` part of the frame is empty right away.
 
 ### What is not in the stream
 
@@ -113,6 +119,8 @@ Paths below are protobuf field names as JSON (`preserving_proto_field_name`).
 - Doors, fuses and damage to individual components.
 - Other players and targets.
 - Ship data while you are on foot. Only your own vitals are sent then.
+- What other crew members do. Each client only reports its own player. You see someone else's actions only through their effect on the ship, for example a system that powers off or shields that drop. Who did it is not reported.
+- Interaction with engineering screens and fuse panels.
 
 ## 4. Sending: triggerable actions
 
@@ -165,6 +173,12 @@ Actions are sent with `TriggerGameAction { action_name, hold_ms }`. `ListTrigger
 - `v_invoke_ping`: the only action that can be held down, using `hold_ms`.
 - `v_target_hail`
 
+### Requirements we found
+
+- Actions only work when `server.game.telemetry.trigger.actions.enabled = 1` is in the `user.cfg` of the channel you play (LIVE, PTU and so on, each has its own file), and the game was restarted after adding it.
+- Every call gets an answer. Check `status` in the reply: the gRPC call itself succeeds even when the game refuses the action.
+- Ship actions need you seated in a seat that controls the ship. Player actions need you on foot.
+
 ### What worked in testing
 
 Tested from the pilot seat of an Anvil Asgard and a C8 Pisces on PTU, November 2026. Self-destruct, eject, emergency exit and the emotes were not tried.
@@ -180,7 +194,7 @@ The game's statuses seen so far:
 | Status | Meaning |
 |---|---|
 | `OK` | Accepted. For gear and VTOL we saw the ship react; for the others the answer only means the game accepted the action. |
-| `FILTERED` | Accepted but blocked right now. |
+| `FILTERED` | Accepted but blocked right now. We saw it once, for `v_vtol_off`. |
 | `MAP_INACTIVE` | The control group the action belongs to is not active (for example player actions while seated, ship actions on foot). |
 | `FAILED` | Tried and failed. |
 
