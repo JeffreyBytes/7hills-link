@@ -40,6 +40,7 @@ jobs:
           --name 7HillsLink
           --paths src
           --add-data "src/sevenhills_link/ui;sevenhills_link/ui"
+          --add-data "src/sevenhills_link/integrations;sevenhills_link/integrations"
           --collect-submodules sevenhills_link
           --hidden-import keyring.backends.Windows
           run_client.py

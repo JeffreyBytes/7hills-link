@@ -96,7 +96,7 @@
 
       <div class="card warn hidden" id="cfgCard">
         <h2 style="font-size:20px">Switch on game telemetry</h2>
-        <p class="muted" style="margin:6px 0 12px">Adds three lines to the game's <span class="mono">user.cfg</span> for each install found and sets one Windows setting for your user. Nothing else is changed. Windows may ask for permission if the game is under Program Files.</p>
+        <p class="muted" style="margin:6px 0 12px">Adds the telemetry lines to the game's <span class="mono">user.cfg</span> for each install found and sets one Windows setting for your user. Nothing else is changed. Windows may ask for permission if the game is under Program Files.</p>
         <button class="btn" onclick="enableTelemetry()">Switch on</button>
         <p class="err" id="cfgErr"></p>
       </div>
@@ -124,6 +124,32 @@
           <label><input type="checkbox" checked disabled> Seat &amp; crew role</label>
           <label><input type="checkbox" id="optVitals" onchange="share({share_vitals:this.checked})"> Health &amp; vitals</label>
           <label><input type="checkbox" id="optUec" onchange="share({share_uec:this.checked})"> aUEC balance</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="grow"><div style="font-weight:600;font-size:15px">Local bridge <span class="dim" style="font-weight:400;font-size:12px">· button boxes &amp; panels</span></div>
+            <div class="muted" style="font-size:13px">Lets Joystick Gremlin, LED tools and other programs on this PC read your ship state and send game actions. Nothing goes over the network.</div></div>
+          <div class="seg" id="bridgeSeg" role="radiogroup" aria-label="Local bridge">
+            <button type="button" role="radio" data-on="0" onclick="setBridge(false)">Off</button>
+            <button type="button" role="radio" data-on="1" onclick="setBridge(true)">On</button>
+          </div>
+        </div>
+        <div class="hidden" id="bridgeOpts" style="padding-top:12px;margin-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px">
+          <div class="row" style="font-size:13px">
+            <span class="mono" id="bridgeAddr"></span>
+            <span class="dim">key</span><span class="mono" id="bridgeKey">••••••••</span>
+            <button class="link" onclick="toggleKey()" id="keyShowBtn">Show</button>
+            <button class="link" onclick="copyKey()">Copy</button>
+            <button class="link" style="color:var(--dim)" onclick="if(confirm('Make a new key? Tools using the old key stop working.')) call('new_bridge_key')">New key</button>
+          </div>
+          <label style="display:flex;gap:10px;align-items:center;font-size:13px;cursor:pointer"><input type="checkbox" id="optRisky" style="accent-color:var(--gold)" onchange="call('set_bridge_risky', this.checked)"> Allow risky actions <span class="dim">(self-destruct, eject, door locks)</span></label>
+          <div class="row" style="font-size:13px">
+            <span class="dim grow" id="bridgeLast">No actions sent yet.</span>
+            <button class="btn outline small" onclick="api('open_gremlin_folder')">Joystick Gremlin plugin</button>
+          </div>
+          <p class="err" id="bridgeErr" style="margin:0"></p>
         </div>
       </div>
 
@@ -164,6 +190,15 @@
   function modeOf(st) { return st ? (st.share_mode || (st.share_org ? 'full' : 'online')) : 'online' }
   function setMode(m) { if (modeOf(S && S.settings) !== m) share({ share_mode: m }) }
 
+  let keyShown = false, copiedAt = 0
+  function setBridge(on) { if (!!(S && S.bridge && S.bridge.enabled) !== on) call('set_bridge', on) }
+  function toggleKey() { keyShown = !keyShown; if (S) render(S) }
+  async function copyKey() {
+    const k = S && S.bridge ? S.bridge.key : ''
+    try { await navigator.clipboard.writeText(k); copiedAt = Date.now() }
+    catch (e) { keyShown = true; render(S) }
+  }
+
   function render(s) {
     S = s
     $('ver').textContent = 'v' + s.version
@@ -201,6 +236,20 @@
     show('shareOpts', mode === 'full')
     $('optVitals').checked = !!(s.settings && s.settings.share_vitals)
     $('optUec').checked = !!(s.settings && s.settings.share_uec)
+
+    const b = s.bridge || {}
+    document.querySelectorAll('#bridgeSeg button').forEach(x => {
+      const on = (x.dataset.on === '1') === !!b.enabled
+      x.classList.toggle('on', on); x.setAttribute('aria-checked', on ? 'true' : 'false')
+    })
+    show('bridgeOpts', !!b.enabled)
+    $('bridgeAddr').textContent = '127.0.0.1:' + (b.port || 50052)
+    $('bridgeKey').textContent = keyShown ? (b.key || '') : '••••••••'
+    $('keyShowBtn').textContent = keyShown ? 'Hide' : 'Show'
+    $('optRisky').checked = !!b.allow_risky
+    const l = b.last
+    $('bridgeLast').textContent = Date.now() - copiedAt < 2500 ? 'Key copied.' : l ? 'Last: ' + l.action + ' · ' + l.ago + ' s ago' + (l.ok ? '' : ' · ' + l.error) : 'No actions sent yet.'
+    $('bridgeErr').textContent = b.error || (b.enabled && s.cfg_missing && s.cfg_missing.indexOf('server.game.telemetry.trigger.actions.enabled') >= 0 ? 'Press Switch on above and restart the game so it accepts actions.' : '')
 
     $('channels').innerHTML = s.installs.map(i => '<button class="chip' + (i.channel === s.channel ? ' on' : '') + '" onclick="call(\'set_channel\',\'' + esc(i.channel) + '\')">' + esc(i.channel) + '</button>').join('') || '<span class="dim">none</span>'
     show('unlinkBtn', s.linked)

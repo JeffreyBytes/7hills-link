@@ -5,11 +5,17 @@ Independent of the window, so it can be tested and run headless.
 
 from __future__ import annotations
 
+import os
+import shutil
 import threading
 import time
 import webbrowser
+from pathlib import Path
 
 from . import __version__, api, detect, gamecfg, protoset
+from .actions import GameActions
+from .bridge import Bridge
+from .paths import data_dir, resource
 from .stream import GameStream
 
 SEND_EVERY = 1.0        # seconds between uploads while frames arrive
@@ -46,6 +52,7 @@ class Core:
         self.env_ok = False
         self.needs_restart = False
         self.stream: GameStream | None = None
+        self.actions: GameActions | None = None
         self.stream_exe: str | None = None
         self.proto_error: str | None = None
         self.token = api.load_token()
@@ -59,6 +66,7 @@ class Core:
         self.uploads = 0
         self._last_settings = 0.0
         self._stop = threading.Event()
+        self.bridge = Bridge(self.latest_frame, lambda: self.actions if self.stream and self.stream.connected else None)
 
     # ---------------------------------------------------------------- setup
 
@@ -72,7 +80,8 @@ class Core:
                 self.channel = running
             elif self.channel not in names:
                 self.channel = "LIVE" if "LIVE" in names else (names[0] if names else None)
-            self.cfg_state = {i.channel: {"missing": gamecfg.missing(i.user_cfg), "path": str(i.user_cfg)} for i in installs}
+            acts = self.bridge.cfg.enabled
+            self.cfg_state = {i.channel: {"missing": gamecfg.missing(i.user_cfg, acts), "path": str(i.user_cfg)} for i in installs}
             self.env_ok = gamecfg.env_enabled()
 
     def current(self) -> detect.Install | None:
@@ -87,12 +96,13 @@ class Core:
     def enable_telemetry(self) -> dict:
         """Write user.cfg for every install found, and the user environment variable."""
         result = {"changed": [], "needs_admin": [], "errors": []}
+        acts = self.bridge.cfg.enabled
         for inst in self.installs:
             try:
-                if gamecfg.apply(inst.user_cfg):
+                if gamecfg.apply(inst.user_cfg, acts):
                     result["changed"].append(inst.channel)
             except gamecfg.NeedsAdmin:
-                if gamecfg.apply_elevated(inst.user_cfg):
+                if gamecfg.apply_elevated(inst.user_cfg, acts):
                     result["needs_admin"].append(inst.channel)
                 else:
                     result["errors"].append(inst.channel + ": no permission")
@@ -116,6 +126,9 @@ class Core:
         if self.stream:
             self.stream.stop()
             self.stream = None
+        if self.actions:
+            self.actions.close()
+            self.actions = None
         self.stream_exe = None
         if not inst:
             return
@@ -125,8 +138,10 @@ class Core:
         except Exception as e:
             self.proto_error = str(e)[:200]
             return
-        self.stream = GameStream(fds, gamecfg.port_of(inst.user_cfg))
+        port = gamecfg.port_of(inst.user_cfg)
+        self.stream = GameStream(fds, port)
         self.stream.start()
+        self.actions = GameActions(fds, port)
         self.stream_exe = str(inst.exe)
 
     def ensure_stream(self) -> None:
@@ -201,11 +216,58 @@ class Core:
                     self._lost_key()
         return self.status()
 
+    # ---------------------------------------------------------------- local bridge
+
+    def latest_frame(self) -> dict | None:
+        """Newest frame without draining the uploader's events."""
+        s = self.stream
+        if not s:
+            return None
+        with s._lock:
+            return s._frame
+
+    def set_bridge(self, enabled: bool) -> dict:
+        self.bridge.cfg.enabled = bool(enabled)
+        self.bridge.cfg.save()
+        if enabled:
+            self.bridge.start()
+        else:
+            self.bridge.stop()
+        self.scan()  # the actions line in user.cfg is now wanted (or not)
+        return self.status()
+
+    def set_bridge_risky(self, allow: bool) -> dict:
+        self.bridge.cfg.allow_risky = bool(allow)
+        self.bridge.cfg.save()
+        return self.status()
+
+    def new_bridge_key(self) -> dict:
+        self.bridge.cfg.new_key()
+        return self.status()
+
+    def gremlin_folder(self) -> Path:
+        """Copy the bundled Joystick Gremlin plugin to a folder the user can open."""
+        dest = data_dir() / "joystick-gremlin"
+        dest.mkdir(parents=True, exist_ok=True)
+        src = resource("integrations", "joystick_gremlin", "7hills_action.py")
+        if src.exists():
+            shutil.copyfile(src, dest / src.name)
+        return dest
+
+    def open_gremlin_folder(self) -> None:
+        folder = self.gremlin_folder()
+        if os.name == "nt":
+            os.startfile(folder)  # type: ignore[attr-defined]
+        else:
+            webbrowser.open(folder.as_uri())
+
     # ---------------------------------------------------------------- upload loop
 
     def run(self) -> None:
         self.scan()
         self.ensure_stream()
+        if self.bridge.cfg.enabled:
+            self.bridge.start()
         self.refresh_settings(force=True)
         last_sent_frame_at = 0.0
         last_scan = time.time()
@@ -234,6 +296,7 @@ class Core:
 
     def stop(self) -> None:
         self._stop.set()
+        self.bridge.stop()
         if self.stream:
             self.stream.stop()
 
@@ -269,4 +332,5 @@ class Core:
                 "last_upload_ago": round(time.time() - self.last_upload, 1) if self.last_upload else None,
                 "upload_error": self.upload_error,
                 "now": _summary(frame),
+                "bridge": self.bridge.status(),
             }

@@ -47,6 +47,18 @@ class JsApi:
     def set_share(self, patch):
         return self._core.set_share(dict(patch or {}))
 
+    def set_bridge(self, enabled):
+        return self._core.set_bridge(bool(enabled))
+
+    def set_bridge_risky(self, allow):
+        return self._core.set_bridge_risky(bool(allow))
+
+    def new_bridge_key(self):
+        return self._core.new_bridge_key()
+
+    def open_gremlin_folder(self):
+        self._core.open_gremlin_folder()
+
     def open_dashboard(self):
         webbrowser.open(SITE + "/live")
 
