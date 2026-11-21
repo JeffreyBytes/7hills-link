@@ -1,0 +1,61 @@
+name: Build 7Hills Link
+
+on:
+  push:
+    tags: ['v*']
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install grpcio protobuf pytest
+      - run: python -m pytest -q tests
+        env:
+          PYTHONPATH: src
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: Build exe
+        run: >
+          pyinstaller --noconfirm --clean --onefile --windowed
+          --name 7HillsLink
+          --paths src
+          --add-data "src/sevenhills_link/ui;sevenhills_link/ui"
+          --collect-submodules sevenhills_link
+          --hidden-import keyring.backends.Windows
+          run_client.py
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          $v = & .\dist\7HillsLink.exe --version | Out-String
+          Write-Host "version: $v"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 7HillsLink
+          path: dist/7HillsLink.exe
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/7HillsLink.exe
+          generate_release_notes: true

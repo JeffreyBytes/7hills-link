@@ -1,0 +1,269 @@
+"""The client's brain: finds the game, links the PC, streams and uploads.
+
+Independent of the window, so it can be tested and run headless.
+"""
+
+from __future__ import annotations
+
+import threading
+import time
+import webbrowser
+
+from . import __version__, api, detect, gamecfg, protoset
+from .stream import GameStream
+
+SEND_EVERY = 1.0        # seconds between uploads while frames arrive
+HEARTBEAT = 15.0        # upload at least this often while connected, even if nothing new
+SETTINGS_EVERY = 30.0   # refresh sharing settings from 7Net
+
+
+def _summary(frame: dict | None) -> dict:
+    """What the window shows under "Right now"."""
+    if not frame:
+        return {}
+    actor = frame.get("actor") or {}
+    st = actor.get("state") or {}
+    vs = (frame.get("vehicle") or {}).get("state") or {}
+    loco = str(st.get("locomotion", "")).replace("ACTOR_LOCOMOTION_STATE_", "").lower()
+    out = {"locomotion": loco, "seat": st.get("seat_name") or None}
+    if vs.get("class_name"):
+        fl = vs.get("flight") or {}
+        out.update({
+            "ship": str(vs.get("class_name")).replace("_", " "),
+            "gear": str((fl.get("state") or {}).get("gear", "")).replace("VEHICLE_COMPONENT_DEPLOYMENT_STATE_", "").lower(),
+            "mode": str((vs.get("master_mode") or {}).get("mode", "")).replace("VEHICLE_MASTER_MODE_", ""),
+            "power_on": all((vs.get("power") or {}).get(k, True) for k in ("powerplants", "engines")),
+        })
+    return out
+
+
+class Core:
+    def __init__(self) -> None:
+        self.lock = threading.RLock()
+        self.installs: list[detect.Install] = []
+        self.channel: str | None = None
+        self.cfg_state: dict[str, dict] = {}
+        self.env_ok = False
+        self.needs_restart = False
+        self.stream: GameStream | None = None
+        self.stream_exe: str | None = None
+        self.proto_error: str | None = None
+        self.token = api.load_token()
+        self.linked = bool(self.token)
+        self.link: dict | None = None
+        self.link_error: str | None = None
+        self.member: dict | None = None
+        self.settings: dict | None = None
+        self.last_upload: float = 0
+        self.upload_error: str | None = None
+        self.uploads = 0
+        self._last_settings = 0.0
+        self._stop = threading.Event()
+
+    # ---------------------------------------------------------------- setup
+
+    def scan(self) -> None:
+        installs = detect.find_installs()
+        running = detect.running_channel()
+        with self.lock:
+            self.installs = installs
+            names = [i.channel for i in installs]
+            if running and running in names:
+                self.channel = running
+            elif self.channel not in names:
+                self.channel = "LIVE" if "LIVE" in names else (names[0] if names else None)
+            self.cfg_state = {i.channel: {"missing": gamecfg.missing(i.user_cfg), "path": str(i.user_cfg)} for i in installs}
+            self.env_ok = gamecfg.env_enabled()
+
+    def current(self) -> detect.Install | None:
+        return next((i for i in self.installs if i.channel == self.channel), None)
+
+    def set_channel(self, channel: str) -> None:
+        with self.lock:
+            if any(i.channel == channel for i in self.installs):
+                self.channel = channel
+                self._restart_stream()
+
+    def enable_telemetry(self) -> dict:
+        """Write user.cfg for every install found, and the user environment variable."""
+        result = {"changed": [], "needs_admin": [], "errors": []}
+        for inst in self.installs:
+            try:
+                if gamecfg.apply(inst.user_cfg):
+                    result["changed"].append(inst.channel)
+            except gamecfg.NeedsAdmin:
+                if gamecfg.apply_elevated(inst.user_cfg):
+                    result["needs_admin"].append(inst.channel)
+                else:
+                    result["errors"].append(inst.channel + ": no permission")
+            except Exception as e:
+                result["errors"].append(f"{inst.channel}: {e}")
+        try:
+            if not gamecfg.env_enabled():
+                gamecfg.enable_env()
+        except Exception as e:
+            result["errors"].append(f"environment: {e}")
+        if result["changed"] or result["needs_admin"]:
+            self.needs_restart = True
+        time.sleep(1.5 if result["needs_admin"] else 0)
+        self.scan()
+        return result
+
+    # ---------------------------------------------------------------- stream
+
+    def _restart_stream(self) -> None:
+        inst = self.current()
+        if self.stream:
+            self.stream.stop()
+            self.stream = None
+        self.stream_exe = None
+        if not inst:
+            return
+        try:
+            fds = protoset.load(inst.exe)
+            self.proto_error = None
+        except Exception as e:
+            self.proto_error = str(e)[:200]
+            return
+        self.stream = GameStream(fds, gamecfg.port_of(inst.user_cfg))
+        self.stream.start()
+        self.stream_exe = str(inst.exe)
+
+    def ensure_stream(self) -> None:
+        inst = self.current()
+        if inst and (self.stream is None or self.stream_exe != str(inst.exe)):
+            self._restart_stream()
+
+    # ---------------------------------------------------------------- linking
+
+    def start_link(self) -> dict:
+        try:
+            self.link = api.start_link()
+            self.link_error = None
+            webbrowser.open(self.link["url"])
+            threading.Thread(target=self._poll_link, name="link-poll", daemon=True).start()
+        except api.ApiError as e:
+            self.link_error = e.message
+        return self.status()
+
+    def _poll_link(self) -> None:
+        link = self.link
+        deadline = time.time() + (link or {}).get("expires_in", 600)
+        while link and time.time() < deadline and not self._stop.is_set():
+            try:
+                r = api.poll_link(link["code"], link["poll_secret"])
+                if r.get("status") == "linked" and r.get("token"):
+                    api.save_token(r["token"])
+                    with self.lock:
+                        self.token, self.linked, self.link = r["token"], True, None
+                    self.refresh_settings(force=True)
+                    return
+            except api.ApiError as e:
+                if e.status in (404, 410):
+                    self.link_error, self.link = "The code expired. Start again.", None
+                    return
+            time.sleep(2)
+        if self.link is link:
+            self.link, self.link_error = None, "The code expired. Start again."
+
+    def unlink(self) -> None:
+        api.clear_token()
+        with self.lock:
+            self.token, self.linked, self.member, self.settings = None, False, None, None
+
+    def _lost_key(self) -> None:
+        self.unlink()
+        self.link_error = "This PC was unlinked on 7Net. Link it again."
+
+    # ---------------------------------------------------------------- sharing
+
+    def refresh_settings(self, force: bool = False) -> None:
+        if not self.token or (not force and time.time() - self._last_settings < SETTINGS_EVERY):
+            return
+        self._last_settings = time.time()
+        try:
+            r = api.get_settings(self.token)
+            self.member, self.settings = r.get("member"), r.get("settings")
+        except api.ApiError as e:
+            if e.status == 401:
+                self._lost_key()
+
+    def set_share(self, patch: dict) -> dict:
+        if self.token:
+            try:
+                r = api.patch_settings(self.token, {k: bool(v) for k, v in patch.items() if k in ("share_org", "share_vitals", "share_uec")})
+                self.member, self.settings = r.get("member"), r.get("settings")
+            except api.ApiError as e:
+                if e.status == 401:
+                    self._lost_key()
+        return self.status()
+
+    # ---------------------------------------------------------------- upload loop
+
+    def run(self) -> None:
+        self.scan()
+        self.ensure_stream()
+        self.refresh_settings(force=True)
+        last_sent_frame_at = 0.0
+        last_scan = time.time()
+        while not self._stop.is_set():
+            self._stop.wait(SEND_EVERY)
+            if time.time() - last_scan > 20:
+                self.scan()
+                self.ensure_stream()
+                last_scan = time.time()
+            self.refresh_settings()
+            if not (self.token and self.stream):
+                continue
+            frame, at, events = self.stream.take()
+            fresh = frame is not None and at > last_sent_frame_at
+            if not fresh and not events and (not self.stream.connected or time.time() - self.last_upload < HEARTBEAT):
+                continue
+            try:
+                api.ingest(self.token, frame, events)
+                self.last_upload, self.upload_error = time.time(), None
+                self.uploads += 1
+                last_sent_frame_at = at
+            except api.ApiError as e:
+                self.upload_error = e.message
+                if e.status == 401:
+                    self._lost_key()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self.stream:
+            self.stream.stop()
+
+    # ---------------------------------------------------------------- status for the window
+
+    def status(self) -> dict:
+        with self.lock:
+            inst = self.current()
+            cfg = self.cfg_state.get(self.channel or "", {})
+            frame = None
+            if self.stream:
+                with self.stream._lock:  # read without draining events
+                    frame = self.stream._frame
+            return {
+                "version": __version__,
+                "installs": [i.as_dict() for i in self.installs],
+                "channel": self.channel,
+                "game_found": inst is not None,
+                "cfg_ok": inst is not None and not cfg.get("missing"),
+                "cfg_missing": list((cfg.get("missing") or {}).keys()),
+                "env_ok": self.env_ok,
+                "needs_restart": self.needs_restart,
+                "proto_error": self.proto_error,
+                "game_connected": bool(self.stream and self.stream.connected),
+                "fps": round(self.stream.fps, 1) if self.stream else 0,
+                "port": self.stream.port if self.stream else gamecfg.DEFAULT_PORT,
+                "stream_error": self.stream.error if self.stream else None,
+                "linked": self.linked,
+                "link": {"code": self.link["code"], "url": self.link["url"]} if self.link else None,
+                "link_error": self.link_error,
+                "member": self.member,
+                "settings": self.settings,
+                "last_upload_ago": round(time.time() - self.last_upload, 1) if self.last_upload else None,
+                "upload_error": self.upload_error,
+                "now": _summary(frame),
+            }
