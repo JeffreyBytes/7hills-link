@@ -189,16 +189,18 @@
             <div class="err hidden" id="edWarn" style="font-size:12px"></div>
             <div class="row" style="font-size:13px"><span class="dim" style="width:110px">What it does</span><select class="inp grow" id="edFn" onchange="pickFn(this.value)"></select></div>
             <div class="row hidden" id="edModeRow" style="font-size:13px"><span class="dim" style="width:110px">Button type</span>
-              <select class="inp" id="edMode" onchange="ed.mode=this.value"><option value="button">Push button: flips it, always in step with the game</option><option value="switch">Switch: on when pressed down, off when released</option></select></div>
+              <select class="inp" id="edMode" onchange="ed.mode=this.value;drawEd()"><option value="button">Push button: flips it, always in step with the game</option><option value="switch">Switch / lever: on when pressed, off when released</option></select>
+              <label id="edRevLbl" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="edRev" style="accent-color:var(--gold)" onchange="ed.reverse=this.checked"> Reverse</label></div>
             <div class="dim" style="font-size:12px" id="edNote"></div>
             <div class="row" style="font-size:13px;flex-wrap:wrap"><span class="dim" style="width:110px">LED</span>
               <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="edHasLed" style="accent-color:var(--gold)" onchange="ed.led=this.checked?(parseInt($('edLed').value)||1):null;drawEd()"> Has an LED</label>
               <span id="edLedCtl" style="display:flex;gap:8px;align-items:center"><span class="dim">number</span><input class="inp" id="edLed" type="number" min="1" max="255" style="width:64px" onchange="ed.led=parseInt(this.value)||1">
               <button class="btn outline small" onclick="edLight(0)">Light</button><button class="btn outline small" onclick="edLight(1)">Next</button><span class="dim" style="font-size:12px">Is the right LED lit? Then keep this number.</span></span></div>
-            <div class="row" style="font-size:13px;flex-wrap:wrap"><span class="dim" style="width:110px">Colours</span>
-              <button class="chip" id="edOnBtn" onclick="palTarget='on';drawEd()"><span id="edOnSw" style="display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px"></span> <span id="edOnLbl">On</span></button>
-              <button class="chip" id="edOffBtn" onclick="palTarget='off';drawEd()"><span id="edOffSw" style="display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px"></span> <span id="edOffLbl">Off</span></button>
-              <span class="dim" style="font-size:12px">pick a colour below</span></div>
+            <div class="row" style="font-size:13px"><span class="dim" style="width:110px">Right now</span><b style="font-weight:600" id="edNow">—</b></div>
+            <div class="row" style="font-size:13px;flex-wrap:wrap;align-items:flex-start"><span class="dim" style="width:110px;padding-top:6px">LED colour when</span>
+              <span id="edColors" style="display:flex;gap:6px;flex-wrap:wrap"></span></div>
+            <div class="row hidden" id="edBlinkRow" style="font-size:13px"><span style="width:110px"></span><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="edBlink" style="accent-color:var(--gold)" onchange="ed.blink_moving=this.checked"> Blink while moving</label></div>
+            <div class="dim" style="font-size:12px">Click a state above, then a colour below. The LED shows the colour right away.</div>
             <div class="pal" id="edPal"></div>
             <div class="row"><button class="btn small" onclick="saveEd()">Save</button><span class="err" id="edErr" style="font-size:13px"></span></div>
           </div>
@@ -316,7 +318,7 @@
   }
   function pickFn(id, silent) {
     const f = fnById(id); if (!f) return
-    ed.function = id; ed.on_color = f.on_color; ed.off_color = f.off_color
+    ed.function = id; ed.on_color = f.on_color; ed.off_color = f.off_color; ed.moving_color = f.moving_color || 'FF8000'; ed.idle_color = '000000' 
     if (!f.has_on_off) ed.mode = 'button'
     if (!silent) drawEd()
   }
@@ -331,10 +333,14 @@
     $('edHasLed').checked = !!ed.led; $('edHasLed').disabled = !!ed.ledOnly
     $('edLedCtl').style.display = ed.led ? 'flex' : 'none'
     if (ed.led) $('edLed').value = ed.led
-    $('edOnSw').style.background = '#' + ed.on_color; $('edOffSw').style.background = '#' + ed.off_color
-    $('edOnLbl').textContent = f.id === 'master' ? 'SCM' : f.kind === 'led' ? 'Warning' : 'On'
-    $('edOffLbl').textContent = f.id === 'master' ? 'NAV' : f.kind === 'led' ? 'Normal' : 'Off'
-    $('edOnBtn').classList.toggle('on', palTarget === 'on'); $('edOffBtn').classList.toggle('on', palTarget === 'off')
+    const states = [['on', f.on_label || 'On'], ['off', f.off_label || 'Off']]
+    if (f.moves) states.push(['moving', 'Moving'])
+    if (f.has_state) states.push(['idle', 'Not in a ship'])
+    if (!states.some(x => x[0] === palTarget)) palTarget = 'on'
+    for (const [k] of states) if (!ed[k + '_color']) ed[k + '_color'] = k === 'moving' ? 'FF8000' : '000000'
+    $('edColors').innerHTML = states.map(([k, lbl]) => '<button class="chip' + (palTarget === k ? ' on' : '') + '" onclick="palTarget=\'' + k + '\';drawEd()"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;border:1px solid var(--line);background:#' + ed[k + '_color'] + '"></span> ' + esc(lbl) + '</button>').join('')
+    show('edBlinkRow', !!f.moves); $('edBlink').checked = ed.blink_moving !== false
+    $('edRevLbl').style.display = ed.mode === 'switch' ? 'flex' : 'none'; $('edRev').checked = !!ed.reverse
     document.querySelectorAll('#edPal span').forEach(x => x.classList.toggle('on', x.dataset.c === ed[palTarget + '_color']))
   }
   function edDevice() { return ed.ledOnly ? $('edDev').value : ed.device_id }
@@ -369,12 +375,13 @@
       lastMaps = key
       $('mapList').innerHTML = maps.length ? maps.map(m => '<div class="row" style="padding:8px 0;border-top:1px solid var(--line)">' +
         '<span style="width:170px" class="dim">' + esc(m.button === null ? (m.device_name || 'LED') : (m.device_name || m.device_id) + ' · ' + m.button) + '</span>' +
-        '<span class="grow"><b style="font-weight:600">' + esc(m.label) + '</b>' + (m.mode === 'switch' ? ' <span class="dim">· switch</span>' : '') + (m.in_game && m.in_game.length ? ' <span style="color:var(--warn)" title="' + esc(m.in_game.join(', ')) + '">· also bound in game</span>' : '') + '</span>' +
+        '<span class="grow"><b style="font-weight:600">' + esc(m.label) + '</b>' + (m.now && m.now.label ? ' <span class="dim">· now: ' + esc(m.now.label) + '</span>' : '') + (m.mode === 'switch' ? ' <span class="dim">· switch</span>' : '') + (m.in_game && m.in_game.length ? ' <span style="color:var(--warn)" title="' + esc(m.in_game.join(', ')) + '">· also bound in game</span>' : '') + '</span>' +
         '<span class="dim mono" style="font-size:11px">' + (m.led ? 'LED ' + m.led : 'no LED') + '</span>' +
         '<span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#' + m.on_color + '"></span><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#' + m.off_color + '"></span>' +
         '<button class="link" onclick="editMap(\'' + m.id + '\')">Edit</button><button class="link" style="color:var(--dim)" onclick="if(confirm(\'Remove this mapping?\')) call(\'panel_delete\',\'' + m.id + '\')">Remove</button></div>').join('')
         : '<span class="dim" style="font-size:13px">Nothing set up yet. Press Add button and then a button on your panel.</span>'
     }
+    if (ed && !$('edBody').classList.contains('hidden')) api('panel_now', ed.function).then(n => { $('edNow').textContent = (n && n.label) || '—' })
     const lg = (ps.log || [])[0]
     $('panelLog').textContent = ps.led_error ? 'LED: ' + ps.led_error : lg ? 'Sent ' + lg.action + (lg.ok ? '' : ' · ' + lg.error) : ''
   }

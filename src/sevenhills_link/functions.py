@@ -31,6 +31,9 @@ class Function:
     risky: bool = False                     # needs a 1 s hold on the button
     blink_when_on: bool = False             # warnings
     note: str = field(default="")
+    on_label: str = "On"                    # how the window names each state
+    off_label: str = "Off"
+    moves: bool = False                     # has an in-between state (gear, VTOL)
 
 
 def _seated(st: dict) -> bool:
@@ -105,10 +108,10 @@ def _num_below(key: str, limit: float):
 
 FUNCTIONS: list[Function] = [
     # Flight
-    Function("gear", "Flight", "Landing gear", "state", "v_deploy_landing_system", "v_retract_landing_system", "v_toggle_landing_system", _deploy("gear"), GREEN, RED),
-    Function("vtol", "Flight", "VTOL", "state", "v_vtol_on", "v_vtol_off", "v_vtol_toggle", _deploy("vtol"), GREEN, DIM),
-    Function("master", "Flight", "SCM / NAV mode", "state", "v_master_mode_set_scm", "v_master_mode_set_nav", "v_master_mode_cycle", _master, RED, BLUE, note="On = SCM, off = NAV"),
-    Function("quantum", "Flight", "Quantum drive", "state", None, None, "v_toggle_qdrive_engagement", _flag("quantum_spooled"), BLUE, DIM),
+    Function("gear", "Flight", "Landing gear", "state", "v_deploy_landing_system", "v_retract_landing_system", "v_toggle_landing_system", _deploy("gear"), GREEN, RED, on_label="Down", off_label="Up", moves=True),
+    Function("vtol", "Flight", "VTOL", "state", "v_vtol_on", "v_vtol_off", "v_vtol_toggle", _deploy("vtol"), GREEN, DIM, on_label="Out", off_label="In", moves=True),
+    Function("master", "Flight", "SCM / NAV mode", "state", "v_master_mode_set_scm", "v_master_mode_set_nav", "v_master_mode_cycle", _master, RED, BLUE, on_label="SCM", off_label="NAV"),
+    Function("quantum", "Flight", "Quantum drive", "state", None, None, "v_toggle_qdrive_engagement", _flag("quantum_spooled"), BLUE, DIM, on_label="Spooled", off_label="Not spooled"),
     Function("decoupled", "Flight", "Decoupled mode", "action", "v_ifcs_vector_decoupling_on", "v_ifcs_vector_decoupling_off", "v_ifcs_vector_decoupling_toggle", None, VIOLET, DIM, note="The game does not report this state; the LED shows what the switch last sent"),
     Function("gsafe", "Flight", "G-safe", "action", "v_ifcs_gsafe_on", "v_ifcs_gsafe_off", "v_ifcs_toggle_gforce_safety", None, GREEN, DIM),
     Function("prox", "Flight", "Proximity assist", "action", "v_ifcs_proximity_assist_on", "v_ifcs_proximity_assist_off", "v_ifcs_proximity_assist_toggle", None, GREEN, DIM),
@@ -120,11 +123,11 @@ FUNCTIONS: list[Function] = [
     Function("thrusters", "Power", "Thrusters", "state", "v_power_set_thrusters_on", "v_power_set_thrusters_off", "v_power_toggle_thrusters", _power("engines"), GREEN, RED),
     Function("weapons", "Power", "Weapons", "state", "v_power_set_weapons_on", "v_power_set_weapons_off", "v_power_toggle_weapons", _power("weapons"), AMBER, DIM),
     # Ship
-    Function("flightready", "Ship", "Flight ready", "action", toggle="v_flightready", state=_flight_ready, on_color=GREEN, off_color=AMBER),
+    Function("flightready", "Ship", "Flight ready", "action", toggle="v_flightready", state=_flight_ready, on_color=GREEN, off_color=AMBER, on_label="Ready", off_label="Not ready"),
     Function("lights", "Ship", "Lights", "state", "v_lights_on", "v_lights_off", "v_lights", _flag("lights"), WHITE, DIM),
     Function("doors_open", "Ship", "Open / close all doors", "action", "v_open_all_doors", "v_close_all_doors", "v_toggle_all_doors", None, GREEN, DIM),
-    Function("doors_lock", "Ship", "Lock / unlock all doors", "action", "v_lock_all_doors", "v_unlock_all_doors", "v_toggle_all_doorlocks", None, RED, GREEN),
-    Function("ports_lock", "Ship", "Lock / unlock ports", "action", "v_lock_all_ports", "v_unlock_all_ports", "v_toggle_all_portlocks", None, RED, GREEN),
+    Function("doors_lock", "Ship", "Lock / unlock all doors", "action", "v_lock_all_doors", "v_unlock_all_doors", "v_toggle_all_doorlocks", None, RED, GREEN, on_label="Locked", off_label="Unlocked"),
+    Function("ports_lock", "Ship", "Lock / unlock ports", "action", "v_lock_all_ports", "v_unlock_all_ports", "v_toggle_all_portlocks", None, RED, GREEN, on_label="Locked", off_label="Unlocked"),
     # Seat
     Function("nightvision", "Seat", "Night vision", "state", "v_light_amplification_on", "v_light_amplification_off", "v_light_amplification_toggle", _flag("flight_light_amplification", "ifcs"), GREEN, DIM),
     Function("mode_guns", "Seat", "Guns mode", "action", toggle="v_set_guns_mode", on_color=AMBER, off_color=DIM),
@@ -155,4 +158,16 @@ BY_ID = {f.id: f for f in FUNCTIONS}
 def catalog() -> list[dict]:
     """For the window: grouped list with defaults."""
     return [{"id": f.id, "group": f.group, "label": f.label, "kind": f.kind, "on_color": f.on_color, "off_color": f.off_color,
-             "risky": f.risky, "has_state": f.state is not None, "has_on_off": bool(f.on and f.off), "note": f.note} for f in FUNCTIONS]
+             "moving_color": AMBER if f.moves else None, "idle_color": OFF,
+             "on_label": "Warning" if f.kind == "led" else f.on_label, "off_label": "Normal" if f.kind == "led" else f.off_label,
+             "moves": f.moves, "risky": f.risky, "has_state": f.state is not None, "has_on_off": bool(f.on and f.off), "note": f.note} for f in FUNCTIONS]
+
+
+def state_label(f: Function, v) -> str:
+    if v == "moving":
+        return "Moving"
+    if v is True:
+        return "Warning" if f.kind == "led" else f.on_label
+    if v is False:
+        return "Normal" if f.kind == "led" else f.off_label
+    return "Not in a ship"

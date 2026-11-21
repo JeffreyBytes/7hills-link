@@ -85,6 +85,9 @@ class JsApi:
         from .functions import catalog
         return catalog()
 
+    def panel_now(self, function_id):
+        return self._core.panel.now(str(function_id))
+
     def panel_learn(self):
         self._core.panel.start_learn()
         return self._core.status()

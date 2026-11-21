@@ -141,3 +141,19 @@ def test_joysticks_off_ignores_presses(tmp_path, monkeypatch):
     _time.sleep(0.3)
     assert acts.sent == []
     eng.stop()
+
+
+def test_colour_per_state_and_reverse_lever(tmp_path, monkeypatch):
+    state = {"in_game": True, "seated": True, "gear": "deploying"}
+    eng, acts, leds_ = _engine(tmp_path, monkeypatch, state)
+    eng.save_mapping({"device_id": "3344:0259", "button": 9, "function": "gear", "mode": "switch", "reverse": True,
+                      "led": 9, "on_color": "00FF00", "off_color": "FF0000", "moving_color": "0000FF", "blink_moving": False})
+    _time.sleep(0.4)
+    assert ("3344:0259", 9, "0000FF") in leds_          # moving colour, steady
+    assert eng.now("gear")["label"] == "Moving"
+    _press(eng, 9, True)                                 # reversed lever: held = up
+    _time.sleep(0.3)
+    assert acts.sent[-1][0] == "v_retract_landing_system"
+    state["seated"] = False
+    assert eng.now("gear")["label"] == "Not in a ship"
+    eng.stop()

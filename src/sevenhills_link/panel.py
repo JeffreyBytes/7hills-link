@@ -19,7 +19,7 @@ import time
 from typing import Callable
 
 from . import leds
-from .functions import AMBER, BY_ID, OFF
+from .functions import AMBER, BY_ID, OFF, state_label
 from .paths import data_dir
 
 HOLD_RISKY = 1.0
@@ -117,6 +117,10 @@ class PanelEngine:
             "led": led,
             "on_color": _color(m.get("on_color"), f.on_color),
             "off_color": _color(m.get("off_color"), f.off_color),
+            "moving_color": _color(m.get("moving_color"), AMBER),
+            "idle_color": _color(m.get("idle_color"), OFF),
+            "blink_moving": m.get("blink_moving", True) is not False,
+            "reverse": bool(m.get("reverse")),
         }
         with self._lock:
             # One mapping per physical button.
@@ -149,8 +153,24 @@ class PanelEngine:
                 return m
         return None
 
+    def now(self, function_id: str, mid: str | None = None) -> dict:
+        """What the game reports for a function right now, for the window."""
+        f = BY_ID.get(function_id)
+        if not f:
+            return {}
+        st = self._get_state() or {}
+        v = f.state(st) if f.state else self._memo.get(mid or "")
+        if f.state is None and v is None:
+            return {"label": "Not reported by the game", "value": None}
+        return {"label": state_label(f, v), "value": v}
+
     def status(self) -> dict:
-        return {"enabled": self.cfg.enabled, "active": self.cfg.active, "mappings": [dict(m) for m in self.cfg.mappings], "learn": self.learn,
+        maps = []
+        for m in self.cfg.mappings:
+            x = dict(m)
+            x["now"] = self.now(m["function"], m["id"])
+            maps.append(x)
+        return {"enabled": self.cfg.enabled, "active": self.cfg.active, "mappings": maps, "learn": self.learn,
                 "log": self.log[:5], "led_error": self.led_error}
 
     # ---------------------------------------------------------------- the loop
@@ -197,8 +217,9 @@ class PanelEngine:
                 self._held.pop(m["id"], None)
             return
         if m.get("mode") == "switch":
-            action = (f.on if pressed else f.off) or f.toggle
-            self._memo[m["id"]] = pressed
+            on = pressed != bool(m.get("reverse"))   # reverse: a lever whose button is held while up
+            action = (f.on if on else f.off) or f.toggle
+            self._memo[m["id"]] = on
             self._send(m, action)
             return
         if not pressed:
@@ -246,13 +267,13 @@ class PanelEngine:
             if self._flash.get(m["id"], 0) > now and f.state is None:
                 color = m["on_color"]
             elif v == "moving":
-                color = AMBER if blink else OFF
+                color = m.get("moving_color", AMBER) if (blink or not m.get("blink_moving", True)) else OFF
             elif v is True:
                 color = m["on_color"] if not (f.blink_when_on and not blink) else OFF
             elif v is False:
                 color = m["off_color"]
             else:
-                color = OFF if f.state else m["off_color"]
+                color = m.get("idle_color", OFF) if f.state else m["off_color"]
             key = (m["device_id"], m["led"])
             if self._led_last.get(key) != color:
                 self._led_last[key] = color
