@@ -1,6 +1,6 @@
 # 7Hills Link
 
-Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star Citizen's own local game telemetry and sends it to 7Net, so you can see your ship and vitals on your phone or a second screen at **7hills.space/live**, and — only if you switch it on — share your status with Org Command.
+Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star Citizen's own local game telemetry and sends it to 7Net, so you can see your ship and vitals on your phone or a second screen at **7hills.space/live**, and choose what Org Command sees: nothing, only that you are online (default), or your full status.
 
 **Download:** [7HillsLink.exe](https://github.com/TheBanjolorian/7hills-link/releases/latest/download/7HillsLink.exe) (Windows 10/11). The exe is not code-signed yet, so Windows SmartScreen asks once: *More info → Run anyway*.
 
@@ -25,7 +25,7 @@ See **[docs/TELEMETRY.md](docs/TELEMETRY.md)** for everything we have found: how
 
 - It does not read game memory, inject anything, or touch Easy Anti-Cheat. It only uses the telemetry server the game itself provides.
 - It does not send commands to the game (yet).
-- Live data on 7Net is deleted after 24 hours. Org Command sees you only while sharing is on; health and aUEC only if you tick them.
+- Live data on 7Net is deleted after 24 hours. Org Command sees what you choose: *Off*, *Online only* (default: your name and "in game") or *Full* (ship, seat, status; health and aUEC only if you tick them).
 
 ## Run from source
 
@@ -36,4 +36,4 @@ python -m sevenhills_link            # window
 python -m sevenhills_link --headless
 ```
 
-Tests: `PYTHONPATH=src python -m pytest -q tests`. Builds: GitHub Actions builds `7HillsLink.exe` on every push; a `v*` tag publishes a release.
+Tests: `PYTHONPATH=src python -m pytest -q tests`. Builds: GitHub Actions builds `7HillsLink.exe` on every push; every push to `main` publishes the release for the version in `src/sevenhills_link/__init__.py`.

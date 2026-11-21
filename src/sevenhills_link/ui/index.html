@@ -37,6 +37,10 @@
   .switch { flex: none; width: 52px; height: 30px; border-radius: 15px; border: 0; padding: 3px; cursor: pointer; display: flex; align-items: center; background: #2A2A2A; justify-content: flex-start; }
   .switch.on { background: var(--gold); justify-content: flex-end; }
   .switch span { width: 24px; height: 24px; border-radius: 50%; background: var(--text); display: block; }
+  .seg { flex: none; display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: transparent; color: var(--text); padding: 7px 14px; font: inherit; font-size: 14px; cursor: pointer; }
+  .seg button.on { background: rgba(240,180,67,0.15); color: var(--gold); font-weight: 600; }
+  .seg button:disabled { cursor: default; opacity: 0.5; }
   .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--line); }
   .opts label { display: flex; gap: 10px; align-items: center; cursor: pointer; }
   .opts input { accent-color: var(--gold); width: 16px; height: 16px; }
@@ -103,13 +107,17 @@
 
       <div style="display:flex;flex-direction:column;gap:4px">
         <h1 style="font-size:26px;font-weight:600">Who can see your telemetry</h1>
-        <span class="muted">Your own dashboard always. Org Command only if you switch it on. Live data is deleted after 24 hours.</span>
+        <span class="muted">Your own dashboard always. Org Command sees what you choose below. Live data is deleted after 24 hours.</span>
       </div>
 
       <div class="card">
         <div class="row">
-          <div class="grow"><div style="font-weight:600;font-size:15px">Share with Org Command</div><div class="muted" style="font-size:13px">Org Command (manager and up) sees your ship, seat and status whenever you are online.</div></div>
-          <button class="switch" id="shareSwitch" aria-label="Share with Org Command" onclick="toggleShare()"><span></span></button>
+          <div class="grow"><div style="font-weight:600;font-size:15px">Share with Org Command</div><div class="muted" style="font-size:13px" id="shareHelp"></div></div>
+          <div class="seg" id="shareSeg" role="radiogroup" aria-label="Share with Org Command">
+            <button type="button" role="radio" data-mode="off" onclick="setMode('off')">Off</button>
+            <button type="button" role="radio" data-mode="online" onclick="setMode('online')">Online only</button>
+            <button type="button" role="radio" data-mode="full" onclick="setMode('full')">Full</button>
+          </div>
         </div>
         <div class="opts hidden" id="shareOpts">
           <label><input type="checkbox" checked disabled> Ship status &amp; systems</label>
@@ -148,7 +156,13 @@
     if (r) { render(r.status); if (r.result.errors.length) $('cfgErr').textContent = r.result.errors.join(' · ') }
   }
   function share(patch) { call('set_share', patch) }
-  function toggleShare() { share({ share_org: !(S && S.settings && S.settings.share_org) }) }
+  const SHARE_HELP = {
+    off: 'Org Command does not see you.',
+    online: 'Org Command (manager and up) sees only that you are in game.',
+    full: 'Org Command (manager and up) sees your ship, seat and status while you are in game.',
+  }
+  function modeOf(st) { return st ? (st.share_mode || (st.share_org ? 'full' : 'online')) : 'online' }
+  function setMode(m) { if (modeOf(S && S.settings) !== m) share({ share_mode: m }) }
 
   function render(s) {
     S = s
@@ -178,10 +192,13 @@
     show('cfgCard', s.game_found && !(s.cfg_ok && s.env_ok))
     show('restartCard', s.needs_restart && !s.game_connected)
 
-    const on = !!(s.settings && s.settings.share_org)
-    $('shareSwitch').classList.toggle('on', on)
-    $('shareSwitch').disabled = !s.linked
-    show('shareOpts', on)
+    const mode = modeOf(s.settings)
+    document.querySelectorAll('#shareSeg button').forEach(b => {
+      const on = b.dataset.mode === mode
+      b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); b.disabled = !s.linked
+    })
+    $('shareHelp').textContent = s.linked ? SHARE_HELP[mode] : 'Link this PC first.'
+    show('shareOpts', mode === 'full')
     $('optVitals').checked = !!(s.settings && s.settings.share_vitals)
     $('optUec').checked = !!(s.settings && s.settings.share_uec)
 

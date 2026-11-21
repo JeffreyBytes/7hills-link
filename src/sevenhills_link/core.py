@@ -191,7 +191,10 @@ class Core:
     def set_share(self, patch: dict) -> dict:
         if self.token:
             try:
-                r = api.patch_settings(self.token, {k: bool(v) for k, v in patch.items() if k in ("share_org", "share_vitals", "share_uec")})
+                body = {k: bool(v) for k, v in patch.items() if k in ("share_org", "share_vitals", "share_uec")}
+                if patch.get("share_mode") in ("off", "online", "full"):
+                    body["share_mode"] = patch["share_mode"]
+                r = api.patch_settings(self.token, body)
                 self.member, self.settings = r.get("member"), r.get("settings")
             except api.ApiError as e:
                 if e.status == 401:
