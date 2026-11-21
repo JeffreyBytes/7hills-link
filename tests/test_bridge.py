@@ -170,3 +170,27 @@ def test_actions_line_only_when_bridge_is_on(tmp_path: Path):
     assert set(gamecfg.missing(cfg, with_actions=True)) == {gamecfg.ACTIONS_KEY}
     assert gamecfg.apply(cfg, with_actions=True) is True
     assert gamecfg.missing(cfg, with_actions=True) == {}
+
+
+def test_virpil_devices_grouped(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    from sevenhills_link import virpil
+
+    class FakeHid:
+        @staticmethod
+        def enumerate(vid, pid):
+            assert vid == 0x3344
+            return [
+                {"product_id": 0x4130, "serial_number": "FF01", "product_string": "VPC Stick MT-50CM2", "interface_number": 0},
+                {"product_id": 0x4130, "serial_number": "FF01", "product_string": "", "interface_number": 1},
+                {"product_id": 0x0259, "serial_number": "AA22", "product_string": "VPC Panel #2"},
+            ]
+
+    monkeypatch.setattr(virpil, "_hid", lambda: FakeHid)
+    devs, err = virpil.list_devices()
+    assert err is None
+    assert [d["name"] for d in devs] == ["VPC Panel #2", "VPC Stick MT-50CM2"]
+    assert devs[1]["id"] == "3344:4130:FF01"
+
+    monkeypatch.setattr(virpil, "_hid", lambda: None)
+    assert virpil.list_devices()[0] == [] and virpil.list_devices()[1]

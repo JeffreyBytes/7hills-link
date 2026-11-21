@@ -12,7 +12,7 @@ import time
 import webbrowser
 from pathlib import Path
 
-from . import __version__, api, detect, gamecfg, protoset
+from . import __version__, api, detect, gamecfg, protoset, virpil
 from .actions import GameActions
 from .bridge import Bridge
 from .paths import data_dir, resource
@@ -66,7 +66,9 @@ class Core:
         self.uploads = 0
         self._last_settings = 0.0
         self._stop = threading.Event()
-        self.bridge = Bridge(self.latest_frame, lambda: self.actions if self.stream and self.stream.connected else None)
+        self.virpil: list[dict] = []
+        self.virpil_error: str | None = None
+        self.bridge = Bridge(self.latest_frame, lambda: self.actions if self.stream and self.stream.connected else None, self.virpil_view)
 
     # ---------------------------------------------------------------- setup
 
@@ -236,6 +238,26 @@ class Core:
         self.scan()  # the actions line in user.cfg is now wanted (or not)
         return self.status()
 
+    def scan_virpil(self) -> dict:
+        self.virpil, self.virpil_error = virpil.list_devices()
+        return self.status()
+
+    def set_virpil(self, device_id: str, selected: bool) -> dict:
+        ids = [x for x in self.bridge.cfg.virpil if x != device_id]
+        if selected:
+            ids.append(device_id)
+        self.bridge.cfg.virpil = ids[:32]
+        self.bridge.cfg.save()
+        return self.status()
+
+    def virpil_view(self) -> dict:
+        """Devices found now plus chosen ones that are not plugged in."""
+        chosen = set(self.bridge.cfg.virpil)
+        found = {d["id"] for d in self.virpil}
+        devices = [dict(d, selected=d["id"] in chosen, connected=True) for d in self.virpil]
+        devices += [{"id": i, "name": "Not connected", "selected": True, "connected": False} for i in self.bridge.cfg.virpil if i not in found]
+        return {"devices": devices, "error": self.virpil_error}
+
     def set_bridge_risky(self, allow: bool) -> dict:
         self.bridge.cfg.allow_risky = bool(allow)
         self.bridge.cfg.save()
@@ -268,6 +290,7 @@ class Core:
         self.ensure_stream()
         if self.bridge.cfg.enabled:
             self.bridge.start()
+        self.scan_virpil()
         self.refresh_settings(force=True)
         last_sent_frame_at = 0.0
         last_scan = time.time()
@@ -333,4 +356,5 @@ class Core:
                 "upload_error": self.upload_error,
                 "now": _summary(frame),
                 "bridge": self.bridge.status(),
+                "virpil": self.virpil_view(),
             }

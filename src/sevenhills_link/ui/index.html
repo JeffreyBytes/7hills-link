@@ -149,6 +149,11 @@
             <span class="dim grow" id="bridgeLast">No actions sent yet.</span>
             <button class="btn outline small" onclick="api('open_gremlin_folder')">Joystick Gremlin plugin</button>
           </div>
+          <div style="border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px">
+            <div class="row" style="font-size:13px"><span class="grow"><b>Virpil devices</b> <span class="dim">· pick the ones that should show ship status on their LEDs</span></span>
+              <button class="link" onclick="call('scan_virpil')">Scan again</button></div>
+            <div id="virpilList" style="display:flex;flex-direction:column;gap:6px;font-size:13px"></div>
+          </div>
           <p class="err" id="bridgeErr" style="margin:0"></p>
         </div>
       </div>
@@ -190,7 +195,7 @@
   function modeOf(st) { return st ? (st.share_mode || (st.share_org ? 'full' : 'online')) : 'online' }
   function setMode(m) { if (modeOf(S && S.settings) !== m) share({ share_mode: m }) }
 
-  let keyShown = false, copiedAt = 0
+  let keyShown = false, copiedAt = 0, lastVirpil = null
   function setBridge(on) { if (!!(S && S.bridge && S.bridge.enabled) !== on) call('set_bridge', on) }
   function toggleKey() { keyShown = !keyShown; if (S) render(S) }
   async function copyKey() {
@@ -250,6 +255,12 @@
     const l = b.last
     $('bridgeLast').textContent = Date.now() - copiedAt < 2500 ? 'Key copied.' : l ? 'Last: ' + l.action + ' · ' + l.ago + ' s ago' + (l.ok ? '' : ' · ' + l.error) : 'No actions sent yet.'
     $('bridgeErr').textContent = b.error || (b.enabled && s.cfg_missing && s.cfg_missing.indexOf('server.game.telemetry.trigger.actions.enabled') >= 0 ? 'Press Switch on above and restart the game so it accepts actions.' : '')
+
+    const v = s.virpil || { devices: [] }
+    const vHtml = v.devices.length
+      ? v.devices.map(d => '<label style="display:flex;gap:10px;align-items:center;cursor:pointer"><input type="checkbox" style="accent-color:var(--gold)" ' + (d.selected ? 'checked ' : '') + 'onchange="call(\'set_virpil\',\'' + esc(d.id) + '\',this.checked)"> <span' + (d.connected ? '' : ' class="dim"') + '>' + esc(d.name) + '</span> <span class="dim mono" style="font-size:11px">' + esc(d.id) + '</span></label>').join('')
+      : '<span class="dim">' + esc(v.error || 'No Virpil devices found. Plug them in and press Scan again.') + '</span>'
+    if (lastVirpil !== vHtml) { $('virpilList').innerHTML = vHtml; lastVirpil = vHtml }
 
     $('channels').innerHTML = s.installs.map(i => '<button class="chip' + (i.channel === s.channel ? ' on' : '') + '" onclick="call(\'set_channel\',\'' + esc(i.channel) + '\')">' + esc(i.channel) + '</button>').join('') || '<span class="dim">none</span>'
     show('unlinkBtn', s.linked)

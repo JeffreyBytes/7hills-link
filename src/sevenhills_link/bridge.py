@@ -99,12 +99,14 @@ class BridgeConfig:
         self.allow_risky = bool(d.get("allow_risky", False))
         p = d.get("port")
         self.port = p if isinstance(p, int) and 1024 <= p <= 65535 else DEFAULT_PORT
+        v = d.get("virpil")
+        self.virpil: list[str] = [x for x in v if isinstance(x, str)][:32] if isinstance(v, list) else []
         k = d.get("key")
         self.key = k if isinstance(k, str) and len(k) >= 24 else secrets.token_urlsafe(24)
         self.save()
 
     def save(self) -> None:
-        self.path.write_text(json.dumps({"enabled": self.enabled, "allow_risky": self.allow_risky, "port": self.port, "key": self.key}, indent=2), encoding="utf-8")
+        self.path.write_text(json.dumps({"enabled": self.enabled, "allow_risky": self.allow_risky, "port": self.port, "key": self.key, "virpil": self.virpil}, indent=2), encoding="utf-8")
 
     def new_key(self) -> None:
         self.key = secrets.token_urlsafe(24)
@@ -114,8 +116,10 @@ class BridgeConfig:
 class Bridge:
     """HTTP server on 127.0.0.1. get_frame returns the latest raw frame; get_actions the GameActions or None."""
 
-    def __init__(self, get_frame: Callable[[], dict | None], get_actions: Callable[[], object | None]) -> None:
+    def __init__(self, get_frame: Callable[[], dict | None], get_actions: Callable[[], object | None],
+                 get_devices: Callable[[], dict] | None = None) -> None:
         self.cfg = BridgeConfig()
+        self._get_devices = get_devices or (lambda: {"devices": [], "error": None})
         self._get_frame = get_frame
         self._get_actions = get_actions
         self._server: ThreadingHTTPServer | None = None
@@ -244,6 +248,8 @@ def _handler(bridge: Bridge):
                 except Exception as e:
                     return self._send(502, {"error": str(e)[:200]})
                 self._send(200, {"actions": [dict(a, blocked=a["action_name"] in RISKY and not bridge.cfg.allow_risky) for a in items]})
+            elif path == "/devices":
+                self._send(200, bridge._get_devices())
             elif path == "/events":
                 self._events()
             else:

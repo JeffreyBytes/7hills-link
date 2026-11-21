@@ -56,6 +56,12 @@ class JsApi:
     def new_bridge_key(self):
         return self._core.new_bridge_key()
 
+    def scan_virpil(self):
+        return self._core.scan_virpil()
+
+    def set_virpil(self, device_id, selected):
+        return self._core.set_virpil(str(device_id), bool(selected))
+
     def open_gremlin_folder(self):
         self._core.open_gremlin_folder()
 

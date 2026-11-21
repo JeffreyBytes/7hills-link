@@ -32,6 +32,7 @@ Base URL is `http://127.0.0.1:50052`. Send the key in one of these headers:
 | `GET /state?raw=1` | The full telemetry frame as the game sends it |
 | `GET /actions` | `{actions: [{action_name, category, holdable, blocked}]}` for the running build |
 | `POST /action` with `{"name": "v_vtol_on", "hold_ms": 0}` | Sends the action. Answers `200` on success. The errors are: `401` wrong key, `403` blocked or from a web page, `429` too fast, `503` game not connected, `502` the game refused it |
+| `GET /devices` | Virpil devices found on this PC (USB vendor 0x3344), one entry per device, with `selected` for the ones picked in 7Hills Link |
 | `GET /events` | Server-Sent Events: `event: state` with the compact state every time it changes, and a ping every 15 s |
 
 Examples in PowerShell:
@@ -70,6 +71,8 @@ The plugin was written for Joystick Gremlin R13's user-plugin API. If your Greml
 
 ## Virpil LEDs
 
-Not built yet. The plan is a rules file that maps a state to a LED, for example gear down → green. The bridge will then set the LED through Virpil's own `VPC_LED_Control.exe`.
+7Hills Link lists every connected Virpil device under *Local bridge → Virpil devices*, so you can pick the ones that should show ship status. Listing only reads what Windows reports; nothing is sent to the devices.
+
+LED control itself is not built yet. The plan is a rules file that maps a state to a LED, for example gear down → green. The bridge will then set the LED through Virpil's own `VPC_LED_Control.exe` on the devices you picked.
 
 Until then, any tool that reads `GET /events` can drive LEDs itself.
