@@ -165,6 +165,25 @@ Actions are sent with `TriggerGameAction { action_name, hold_ms }`. `ListTrigger
 - `v_invoke_ping`: the only action that can be held down, using `hold_ms`.
 - `v_target_hail`
 
+### What worked in testing
+
+Tested from the pilot seat of an Anvil Asgard and a C8 Pisces on PTU, November 2026. Self-destruct, eject, emergency exit and the emotes were not tried.
+
+| Game answer | Actions |
+|---|---|
+| `OK` (61) | All flight, power, IFCS, VTOL, gear, master mode, HUD, transform, quantum, operator modes, remote turrets, lights, night vision, flight ready, ATC, docking request, ping, hail |
+| `MAP_INACTIVE` (4) | `mobiglas`, `toggle_flashlight`, `v_starmap`, `visor_wipe`: these belong to the on-foot controls, so they are inactive while seated |
+| `FAILED` (9) | All door and port actions (`v_open/close/toggle_all_doors`, `v_lock/unlock/toggle_all_doorlocks`, the port versions) |
+
+The game's statuses seen so far:
+
+| Status | Meaning |
+|---|---|
+| `OK` | Accepted. For gear and VTOL we saw the ship react; for the others the answer only means the game accepted the action. |
+| `FILTERED` | Accepted but blocked right now. |
+| `MAP_INACTIVE` | The control group the action belongs to is not active (for example player actions while seated, ship actions on foot). |
+| `FAILED` | Tried and failed. |
+
 **Be careful** with `v_self_destruct`, `v_eject` and the door locks. A tool that sends actions should accept them only from the local player, never from a network or a server. It is not clear how CIG's rules treat automating these actions, so use them like a button box, not as a bot.
 
 ## 5. Getting the .proto definitions
