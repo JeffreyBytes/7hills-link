@@ -73,6 +73,8 @@ The plugin was written for Joystick Gremlin R13's user-plugin API. If your Greml
 
 7Hills Link lists every connected Virpil device under *Local bridge → Virpil devices*, so you can pick the ones that should show ship status. Listing only reads what Windows reports; nothing is sent to the devices.
 
-LED control itself is not built yet. The plan is a rules file that maps a state to a LED, for example gear down → green. The bridge will then set the LED through Virpil's own `VPC_LED_Control.exe` on the devices you picked.
+**Panel test** (in the window) shows which button you pressed on any stick or panel, and lights an LED by number in one of the 64 colours, so you can find which number is which LED. It uses `VPC_LED_Control.exe <VID> <PID> <number> <R> <G> <B>` from Virpil's VPC Software Suite; number 0 resets the device to its own profile.
+
+Rules that tie a button and its LED to ship state are not built yet. The plan is a rules file that maps a state to a LED, for example gear down → green. The bridge will then set the LED through Virpil's own `VPC_LED_Control.exe` on the devices you picked.
 
 Until then, any tool that reads `GET /events` can drive LEDs itself.

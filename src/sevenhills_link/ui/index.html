@@ -48,6 +48,10 @@
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--mute); cursor: pointer; font: inherit; font-size: 12px; }
   .chip.on { border-color: var(--gold); color: var(--text); background: rgba(240,180,67,.12); }
+  .pal { display: grid; grid-template-columns: repeat(16, 18px); gap: 4px; }
+  .pal span { width: 18px; height: 18px; border-radius: 4px; cursor: pointer; border: 1px solid var(--line); }
+  .pal span.on { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .inp { background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px; }
   .hidden { display: none !important; }
   .err { color: var(--crit); font-size: 13px; }
 </style>
@@ -158,6 +162,26 @@
         </div>
       </div>
 
+      <div class="card" style="display:flex;flex-direction:column;gap:12px">
+        <div><div style="font-weight:600;font-size:15px">Panel test <span class="dim" style="font-weight:400;font-size:12px">· find your buttons and LEDs</span></div>
+          <div class="muted" style="font-size:13px">Press a button on a stick or panel to see its number. Light an LED by number to find which one it is.</div></div>
+        <div class="row" style="background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:10px 12px">
+          <div class="grow"><div class="label">Last button</div><div class="display" style="font-size:20px;font-weight:600" id="lastPress">Press any button…</div></div>
+          <div class="dim mono" style="font-size:11px;text-align:right" id="recentPress"></div>
+        </div>
+        <div class="row" style="flex-wrap:wrap;font-size:13px">
+          <select class="inp" id="ledDev" style="min-width:200px"></select>
+          <span class="dim">LED number</span><input class="inp" id="ledNum" type="number" min="0" max="255" value="1" style="width:70px">
+          <span id="ledSw" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:#00FF00;display:inline-block"></span>
+          <button class="btn small" onclick="ledLight()">Light it</button>
+          <button class="btn outline small" onclick="ledNext()">Next number</button>
+          <button class="link" style="color:var(--dim)" onclick="ledReset()">Reset device</button>
+        </div>
+        <div class="pal" id="ledPal"></div>
+        <div style="font-size:13px" id="ledResult"></div>
+        <div class="dim" style="font-size:12px"><span id="ledTool"></span> <button class="link" onclick="call('browse_led_tool')">Choose file…</button></div>
+      </div>
+
       <div class="card row">
         <div class="grow"><div style="font-weight:600">Game channel</div><div class="dim" style="font-size:12px" id="chHint">Which install to read from</div></div>
         <div class="chips" id="channels"></div>
@@ -195,7 +219,20 @@
   function modeOf(st) { return st ? (st.share_mode || (st.share_org ? 'full' : 'online')) : 'online' }
   function setMode(m) { if (modeOf(S && S.settings) !== m) share({ share_mode: m }) }
 
-  let keyShown = false, copiedAt = 0, lastVirpil = null
+  let keyShown = false, copiedAt = 0, lastVirpil = null, lastDevs = null, ledColor = '00FF00'
+  const LV = ['00', '40', '80', 'FF']
+  function ledPalette() {
+    const cols = []; for (const r of LV) for (const g of LV) for (const b of LV) cols.push(r + g + b)
+    $('ledPal').innerHTML = cols.map(c => '<span title="#' + c + '" data-c="' + c + '" style="background:#' + c + '"></span>').join('')
+    document.querySelectorAll('#ledPal span').forEach(x => x.onclick = () => { ledColor = x.dataset.c; $('ledSw').style.background = '#' + ledColor; markPal(); ledLight() })
+    markPal()
+  }
+  function markPal() { document.querySelectorAll('#ledPal span').forEach(x => x.classList.toggle('on', x.dataset.c === ledColor)) }
+  function ledDev() { return $('ledDev').value }
+  function ledNum() { return Math.max(0, Math.min(255, parseInt($('ledNum').value || '0', 10))) }
+  function ledLight() { if (ledDev()) call('led_test', ledDev(), ledNum(), ledColor) }
+  function ledNext() { $('ledNum').value = ledNum() + 1; ledLight() }
+  function ledReset() { if (ledDev()) call('led_reset', ledDev()) }
   function setBridge(on) { if (!!(S && S.bridge && S.bridge.enabled) !== on) call('set_bridge', on) }
   function toggleKey() { keyShown = !keyShown; if (S) render(S) }
   async function copyKey() {
@@ -262,13 +299,30 @@
       : '<span class="dim">' + esc(v.error || 'No Virpil devices found. Plug them in and press Scan again.') + '</span>'
     if (lastVirpil !== vHtml) { $('virpilList').innerHTML = vHtml; lastVirpil = vHtml }
 
+    const pn = s.panel || {}
+    const lp = pn.last
+    $('lastPress').textContent = lp ? lp.device + ' · button ' + lp.button + (lp.pressed ? '' : ' (released)') : (pn.error || 'Press any button…')
+    $('recentPress').innerHTML = (pn.recent || []).filter(p => p.pressed).slice(0, 4).map(p => esc(p.device + ' #' + p.button + ' · ' + p.ago + 's')).join('<br>')
+    const devs = (s.virpil && s.virpil.devices || []).filter(d => d.connected)
+    const devKey = JSON.stringify(devs.map(d => d.id))
+    if (devKey !== lastDevs) {
+      const keep = ledDev()
+      $('ledDev').innerHTML = devs.length ? devs.map(d => '<option value="' + esc(d.id) + '">' + esc(d.name) + '</option>').join('') : '<option value="">No Virpil device found</option>'
+      if (keep && devs.some(d => d.id === keep)) $('ledDev').value = keep
+      lastDevs = devKey
+    }
+    const lr = s.leds || {}
+    $('ledResult').innerHTML = lr.result ? '<span style="color:' + (lr.result.ok ? 'var(--ok)' : 'var(--crit)') + '">' + esc(lr.result.text) + '</span>' : ''
+    $('ledTool').textContent = lr.tool ? 'LED tool: ' + lr.tool : 'VPC_LED_Control.exe not found (it comes with Virpil\'s VPC Software Suite).'
+
     $('channels').innerHTML = s.installs.map(i => '<button class="chip' + (i.channel === s.channel ? ' on' : '') + '" onclick="call(\'set_channel\',\'' + esc(i.channel) + '\')">' + esc(i.channel) + '</button>').join('') || '<span class="dim">none</span>'
     show('unlinkBtn', s.linked)
     $('footer').textContent = s.linked ? 'Opens your dashboard at 7hills.space/live' : ''
   }
 
   async function tick() { try { const s = await api('status'); if (s) render(s) } catch (e) {} }
-  window.addEventListener('pywebviewready', () => { tick(); setInterval(tick, 1000) })
+  ledPalette()
+  window.addEventListener('pywebviewready', () => { tick(); setInterval(tick, 500) })
 </script>
 </body>
 </html>

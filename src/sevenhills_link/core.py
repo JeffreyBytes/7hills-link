@@ -12,9 +12,10 @@ import time
 import webbrowser
 from pathlib import Path
 
-from . import __version__, api, detect, gamecfg, protoset, virpil
+from . import __version__, api, detect, gamecfg, leds, protoset, virpil
 from .actions import GameActions
 from .bridge import Bridge
+from .panel_input import ButtonWatcher
 from .paths import data_dir, resource
 from .stream import GameStream
 
@@ -66,6 +67,8 @@ class Core:
         self.uploads = 0
         self._last_settings = 0.0
         self._stop = threading.Event()
+        self.buttons = ButtonWatcher()
+        self.led_result: dict | None = None
         self.virpil: list[dict] = []
         self.virpil_error: str | None = None
         self.bridge = Bridge(self.latest_frame, lambda: self.actions if self.stream and self.stream.connected else None, self.virpil_view)
@@ -258,6 +261,38 @@ class Core:
         devices += [{"id": i, "name": "Not connected", "selected": True, "connected": False} for i in self.bridge.cfg.virpil if i not in found]
         return {"devices": devices, "error": self.virpil_error}
 
+    # ---------------------------------------------------------------- LED test
+
+    def led_tool(self) -> Path | None:
+        t = self.bridge.cfg.led_tool
+        if t and Path(t).exists():
+            return Path(t)
+        found = leds.find_tool()
+        if found:
+            self.bridge.cfg.led_tool = str(found)
+            self.bridge.cfg.save()
+        return found
+
+    def set_led_tool(self, path: str) -> dict:
+        p = Path(path)
+        if p.name.lower() == leds.TOOL_NAME.lower() and p.exists():
+            self.bridge.cfg.led_tool = str(p)
+            self.bridge.cfg.save()
+            self.led_result = None
+        else:
+            self.led_result = {"ok": False, "text": f"Choose {leds.TOOL_NAME}", "at": time.time()}
+        return self.status()
+
+    def led_test(self, device_id: str, number: int, color: str) -> dict:
+        ok, text = leds.run(self.led_tool(), device_id, int(number), color)
+        self.led_result = {"ok": ok, "text": text or (f"LED {number} set to #{''.join(leds.snap(color))}" if ok else "Failed"), "at": time.time()}
+        return self.status()
+
+    def led_reset(self, device_id: str) -> dict:
+        ok, text = leds.run(self.led_tool(), device_id, 0, "000000")
+        self.led_result = {"ok": ok, "text": text or ("Device LEDs back to its own profile" if ok else "Failed"), "at": time.time()}
+        return self.status()
+
     def set_bridge_risky(self, allow: bool) -> dict:
         self.bridge.cfg.allow_risky = bool(allow)
         self.bridge.cfg.save()
@@ -291,6 +326,8 @@ class Core:
         if self.bridge.cfg.enabled:
             self.bridge.start()
         self.scan_virpil()
+        self.buttons.start()
+        self.led_tool()
         self.refresh_settings(force=True)
         last_sent_frame_at = 0.0
         last_scan = time.time()
@@ -320,6 +357,7 @@ class Core:
     def stop(self) -> None:
         self._stop.set()
         self.bridge.stop()
+        self.buttons.stop()
         if self.stream:
             self.stream.stop()
 
@@ -357,4 +395,6 @@ class Core:
                 "now": _summary(frame),
                 "bridge": self.bridge.status(),
                 "virpil": self.virpil_view(),
+                "panel": self.buttons.status(),
+                "leds": {"tool": self.bridge.cfg.led_tool, "result": self.led_result},
             }

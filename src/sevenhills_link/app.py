@@ -62,6 +62,22 @@ class JsApi:
     def set_virpil(self, device_id, selected):
         return self._core.set_virpil(str(device_id), bool(selected))
 
+    def led_test(self, device_id, number, color):
+        return self._core.led_test(str(device_id), int(number), str(color))
+
+    def led_reset(self, device_id):
+        return self._core.led_reset(str(device_id))
+
+    def browse_led_tool(self):
+        import webview
+        w = getattr(self, "_window", None)
+        if w is None:
+            return self._core.status()
+        picked = w.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=False, file_types=("VPC LED Control (VPC_LED_Control.exe)", "All files (*.*)"))
+        if picked:
+            return self._core.set_led_tool(picked[0])
+        return self._core.status()
+
     def open_gremlin_folder(self):
         self._core.open_gremlin_folder()
 
@@ -75,7 +91,9 @@ def run_window() -> int:
     core = Core()
     threading.Thread(target=core.run, name="core", daemon=True).start()
     html = resource("ui", "index.html").read_text(encoding="utf-8")
-    webview.create_window("7Hills Link", html=html, js_api=JsApi(core), width=980, height=700, min_size=(760, 560), background_color="#0D0D0D")
+    js = JsApi(core)
+    window = webview.create_window("7Hills Link", html=html, js_api=js, width=980, height=700, min_size=(760, 560), background_color="#0D0D0D")
+    js._window = window
     webview.start()
     core.stop()
     return 0

@@ -99,6 +99,8 @@ class BridgeConfig:
         self.allow_risky = bool(d.get("allow_risky", False))
         p = d.get("port")
         self.port = p if isinstance(p, int) and 1024 <= p <= 65535 else DEFAULT_PORT
+        t = d.get("led_tool")
+        self.led_tool: str | None = t if isinstance(t, str) and t else None
         v = d.get("virpil")
         self.virpil: list[str] = [x for x in v if isinstance(x, str)][:32] if isinstance(v, list) else []
         k = d.get("key")
@@ -106,7 +108,7 @@ class BridgeConfig:
         self.save()
 
     def save(self) -> None:
-        self.path.write_text(json.dumps({"enabled": self.enabled, "allow_risky": self.allow_risky, "port": self.port, "key": self.key, "virpil": self.virpil}, indent=2), encoding="utf-8")
+        self.path.write_text(json.dumps({"enabled": self.enabled, "allow_risky": self.allow_risky, "port": self.port, "key": self.key, "virpil": self.virpil, "led_tool": self.led_tool}, indent=2), encoding="utf-8")
 
     def new_key(self) -> None:
         self.key = secrets.token_urlsafe(24)
