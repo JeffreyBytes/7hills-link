@@ -21,6 +21,14 @@ class ActionError(Exception):
     pass
 
 
+# What the game's TriggerGameAction statuses mean in practice (seen in testing).
+STATUS_TEXT = {
+    "MAP_INACTIVE": "Not available here: sit in a seat that controls this (MAP_INACTIVE)",
+    "FILTERED": "The game blocked it right now (FILTERED)",
+    "FAILED": "The game could not do it (FAILED)",
+}
+
+
 class GameActions:
     def __init__(self, fds, port: int):
         pool = descriptor_pool.DescriptorPool()
@@ -78,7 +86,7 @@ class GameActions:
         if status and not status.endswith("_OK"):
             short = status.replace("TRIGGER_GAME_ACTION_STATUS_", "")
             msg = resp.get("message") or ""
-            raise ActionError(f"Game said {short}" + (f": {msg}" if msg else " (not possible right now, e.g. wrong seat or ship)"))
+            raise ActionError(STATUS_TEXT.get(short, f"Game said {short}") + (f": {msg}" if msg else ""))
         return resp
 
     def close(self) -> None:
