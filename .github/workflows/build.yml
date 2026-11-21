@@ -2,12 +2,9 @@ name: Build 7Hills Link
 
 on:
   push:
-    tags: ['v*']
     branches: [main]
   pull_request:
   workflow_dispatch:
-  release:
-    types: [published]
 
 permissions:
   contents: write
@@ -55,9 +52,23 @@ jobs:
         with:
           name: 7HillsLink
           path: dist/7HillsLink.exe
+      - name: Version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path src/sevenhills_link/__init__.py -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
+          "tag=v$v" >> $env:GITHUB_OUTPUT
+      # Every push to main publishes (or refreshes) the release for the version in __init__.py.
       - name: Release
-        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.release.tag_name || github.ref_name }}
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: 7Hills Link ${{ steps.ver.outputs.tag }}
+          body: |
+            Windows SmartScreen asks once because the exe is not signed yet: More info → Run anyway.
+            Download: https://github.com/TheBanjolorian/7hills-link/releases/latest/download/7HillsLink.exe
           files: dist/7HillsLink.exe
+          overwrite_files: true
+          make_latest: true
