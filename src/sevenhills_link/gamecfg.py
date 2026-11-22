@@ -3,6 +3,10 @@
 Adds three lines to <channel>\\user.cfg (keeping everything already there) and
 sets GRPC_CLIENT_SERVER_ENABLED for the Windows user. The game reads both at
 start, so it must be restarted after the first setup.
+
+On Linux (Wine/Proton) the variable has to be in the game's launch environment
+(launcher script, Lutris or Steam launch options); the client cannot set it, so
+it tells the player what to add and reads the running game's environment to check.
 """
 
 from __future__ import annotations
@@ -19,6 +23,11 @@ WANTED = {
     "server.game.telemetry.enabled": "1",
 }
 ENV_NAME = "GRPC_CLIENT_SERVER_ENABLED"
+ENV_HOWTO = (
+    f"Add {ENV_NAME}=true to the game's launch environment: "
+    f"'export {ENV_NAME}=true' in your launch script, Lutris → Configure → System options → Environment variables, "
+    f"or Steam launch options '{ENV_NAME}=true %command%'. Then restart the game."
+)
 
 _LINE = re.compile(r"^\s*([A-Za-z0-9_.\-]+)\s*=?\s*(.*?)\s*$")
 
@@ -113,9 +122,17 @@ def apply_elevated(path: Path) -> bool:
 
 # ------------------------------------------------------------------ environment
 
-def env_enabled() -> bool:
+def env_enabled() -> bool | None:
+    """True/False on Windows. Elsewhere: what the running game has, True if this
+    client's own environment has it, None when the game is not running to check."""
     if os.name != "nt":
-        return os.environ.get(ENV_NAME, "").lower() == "true"
+        from .detect import running_game_env
+        game = running_game_env(ENV_NAME)
+        if game is not None:
+            return game.lower() == "true"
+        if os.environ.get(ENV_NAME, "").lower() == "true":
+            return True
+        return None
     import winreg
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as k:
@@ -123,6 +140,11 @@ def env_enabled() -> bool:
             return str(v).lower() == "true"
     except OSError:
         return False
+
+
+def env_manual() -> bool:
+    """The player has to set the variable in the game's launch config themselves (not Windows)."""
+    return os.name != "nt"
 
 
 def enable_env() -> bool:

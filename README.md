@@ -18,6 +18,21 @@ Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star 
 5. **Streams** from the game's local server (`127.0.0.1:50051`, never exposed to the network) and sends the state to 7Net as soon as it changes (at most four times a second).
 6. **Runs in the tray**: minimizing or closing hides the window behind a gold 7 in the notification area; quit from its menu. It starts with Windows (hidden, no music) unless you switch that off under Settings.
 
+## Linux (Wine / Proton)
+
+The client runs natively on Linux from source (see *Run from source*; use `export PYTHONPATH=src`). The game's telemetry server listens on the host's `127.0.0.1:50051` through Wine, so the native client can reach it.
+
+- **Finding the game:** it looks inside the usual prefixes (`$WINEPREFIX`, `~/Games/star-citizen` from the LUG helper, other `~/Games/*` Lutris prefixes, Steam/Proton `compatdata/*/pfx`, `~/.wine`), reads the RSI Launcher's files inside them, and maps the running `StarCitizen.exe` back to its folder. If it misses yours, point it there:
+  ```
+  python -m sevenhills_link --game-dir ~/Games/star-citizen
+  # or
+  export SEVENHILLS_SC_DIR=~/Games/star-citizen
+  ```
+  Either takes the Wine prefix, the `StarCitizen` folder, a channel folder (`.../StarCitizen/PTU`) or `StarCitizen.exe` itself. `--game-dir` can be repeated; separate several folders in the variable with `:`.
+- **`user.cfg`:** *Switch on* writes the three lines as on Windows. No admin prompt is needed, the prefix is yours.
+- **`GRPC_CLIENT_SERVER_ENABLED`:** must be in the game's launch environment; the client cannot set it for you. Add `export GRPC_CLIENT_SERVER_ENABLED=true` to your launch script, or set it under Lutris → Configure → System options → Environment variables, or use Steam launch options `GRPC_CLIENT_SERVER_ENABLED=true %command%`. The client checks the running game's environment and shows a hint until it sees the variable there.
+- Not verified yet: whether the telemetry server starts under Wine/Proton at all. Check with `ss -ltnp | grep 50051` while in game, and report in [issue #1](https://github.com/TheBanjolorian/7hills-link/issues/1).
+
 ## What the game's telemetry offers
 
 See **[docs/TELEMETRY.md](docs/TELEMETRY.md)** for everything we have found: how to switch it on, every field you can read, the actions you can send to the game, and how the API definitions are read from the exe. Useful if you want to build your own tool (button boxes, Joystick Gremlin, dashboards).

@@ -125,9 +125,14 @@
       </div>
       <div class="notice red hidden" id="cfgCard">
         <div class="display" style="font-size:19px">Switch on game telemetry</div>
-        <p class="mute" style="margin:4px 0 12px;font-size:13px">Adds three lines to the game's <span class="mono">user.cfg</span> for each install found and sets one Windows setting for your user. Nothing else is changed. Windows may ask for permission if the game is under Program Files.</p>
+        <p class="mute" style="margin:4px 0 12px;font-size:13px" id="cfgText">Adds three lines to the game's <span class="mono">user.cfg</span> for each install found and sets one Windows setting for your user. Nothing else is changed. Windows may ask for permission if the game is under Program Files.</p>
         <button class="btn" onclick="enableTelemetry()">Switch on</button>
         <p class="err" id="cfgErr"></p>
+      </div>
+      <div class="notice hidden" id="envCard">
+        <div class="display" style="font-size:19px">One line for your launch config</div>
+        <p class="mute" style="margin:4px 0 0;font-size:13px" id="envText"></p>
+        <p class="mono" style="margin:8px 0 0;font-size:13px">export GRPC_CLIENT_SERVER_ENABLED=true</p>
       </div>
       <div class="notice hidden" id="restartCard"><b>Restart Star Citizen</b> <span class="mute">so it picks up the new settings. Quit the RSI Launcher fully (tray icon → Quit) and start it again.</span></div>
     </div>
@@ -278,7 +283,7 @@
   function pathOf(s) {
     const steps = [
       { name: 'Game', ok: s.game_found, bad: 'y', head: 'Star Citizen not found' },
-      { name: 'Telemetry', ok: s.cfg_ok && s.env_ok, bad: 'r', head: 'Telemetry is off' },
+      { name: 'Telemetry', ok: s.cfg_ok && s.env_ok !== false, bad: 'r', head: 'Telemetry is off' },
       { name: 'Connected', ok: s.game_connected, bad: 'y', head: s.needs_restart ? 'Restart Star Citizen' : (s.proto_error ? 'Game connection failed' : 'Start the game and load in') },
       { name: '7Net', ok: s.linked && !s.upload_error && s.last_upload_ago !== null, bad: !s.linked ? 'y' : s.upload_error ? 'r' : 'y',
         head: !s.linked ? 'Link this PC' : s.upload_error ? '7Net: ' + s.upload_error : 'Waiting for game data' },
@@ -337,7 +342,13 @@
     if (s.link) $('linkCode').textContent = s.link.code
     $('linkErr').textContent = s.link_error || ''
     show('gameCard', !s.game_found)
-    show('cfgCard', s.game_found && !(s.cfg_ok && s.env_ok))
+    show('cfgCard', s.game_found && !(s.cfg_ok && s.env_ok !== false))
+    if (s.env_manual) $('cfgText').innerHTML = s.cfg_ok
+      ? 'The game is running without <span class="mono">GRPC_CLIENT_SERVER_ENABLED=true</span> in its environment. Add it as shown below and restart the game.'
+      : 'Adds three lines to the game\'s <span class="mono">user.cfg</span> for each install found. Nothing else is changed. On Linux you also add one line to your launch config, shown below.'
+    // Linux/Wine: the variable goes in the game's launch environment; the client can only check it while the game runs.
+    show('envCard', !!s.env_manual && s.game_found && s.env_ok !== true && !s.game_connected)
+    $('envText').textContent = s.env_howto || ''
     show('restartCard', s.needs_restart && !s.game_connected)
 
     const mode = modeOf(s.settings)
