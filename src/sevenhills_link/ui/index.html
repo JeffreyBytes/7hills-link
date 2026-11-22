@@ -268,8 +268,12 @@
   ;['play', 'pause', 'ended', 'timeupdate', 'loadedmetadata'].forEach(e => music.addEventListener(e, paintMusic))
   function setVolume(v) { music.volume = v / 100; $('sndPct').textContent = Math.round(v) + '%' }
   function saveVolume(v) { call('set_sound', null, v / 100) }
-  function togglePlay() { if (music.paused) music.play().catch(() => {}); else music.pause() }
-  function stopMusic() { music.pause(); music.currentTime = 0; paintMusic() }
+  // Stop is remembered: no music on the next start until Play is pressed again.
+  function togglePlay() {
+    if (music.paused) { music.play().catch(() => {}); if (S && S.sound && S.sound.stopped) call('set_sound', null, null, null, false) }
+    else music.pause()
+  }
+  function stopMusic() { music.pause(); music.currentTime = 0; paintMusic(); call('set_sound', null, null, null, true) }
   // Mute stops the music right away (not only silences it) and is remembered across restarts.
   function toggleMute() {
     const muting = !(S && S.sound && S.sound.muted)
@@ -336,7 +340,7 @@
     if (first && !musicStarted) {
       musicStarted = true
       // Muted or at 0 counts as off: nothing starts until they press Play.
-      if (s.prefs && s.prefs.play_on_start && !snd.muted && snd.volume > 0 && !s.autostarted) music.play().catch(() => {})
+      if (s.prefs && s.prefs.play_on_start && !snd.muted && !snd.stopped && snd.volume > 0 && !s.autostarted) music.play().catch(() => {})
     }
     paintMusic()
 
