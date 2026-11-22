@@ -55,3 +55,45 @@ def test_summary():
                                    "master_mode": {"mode": "VEHICLE_MASTER_MODE_SCM"}, "power": {"powerplants": True, "engines": True}}}}
     s = _summary(frame)
     assert s["ship"] == "AEGS Idris M" and s["gear"] == "retracted" and s["mode"] == "SCM" and s["power_on"]
+
+
+def test_uploads_on_change_at_most_4_per_second(tmp_path, monkeypatch):
+    import threading, time
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    from sevenhills_link import core as core_mod
+
+    class FakeStream:
+        connected = True
+        def __init__(self):
+            self.lock = threading.Lock(); self.frame = {"n": 0}; self.at = time.time(); self.events = []
+        def pending(self, since):
+            with self.lock: return self.at > since, bool(self.events)
+        def take(self):
+            with self.lock:
+                ev, self.events = self.events, []
+                return dict(self.frame), self.at, ev
+        def stop(self): pass
+
+    sent = []
+    monkeypatch.setattr(core_mod.api, "ingest", lambda token, frame, events: sent.append((time.time(), frame, events)))
+    c = core_mod.Core()
+    monkeypatch.setattr(c, "scan", lambda: None)
+    monkeypatch.setattr(c, "ensure_stream", lambda: None)
+    monkeypatch.setattr(c, "refresh_settings", lambda force=False: None)
+    c.token = "7hl_test"
+    s = FakeStream(); c.stream = s
+    t = threading.Thread(target=c.run, daemon=True); t.start()
+    # 2 s: the frame changes 20 times a second for 1 s, then stays the same.
+    end = time.time() + 1.0
+    while time.time() < end:
+        with s.lock: s.frame = {"n": s.frame["n"] + 1}; s.at = time.time()
+        time.sleep(0.05)
+    with s.lock: s.events.append("GAME_EVENT_TYPE_ACTOR_ENTER_SEAT"); s.at = time.time()
+    time.sleep(1.0)
+    c.stop()
+    changing = [x for x in sent if x[0] < end + 0.01]
+    assert 3 <= len(changing) <= 5, len(changing)                 # ~4 a second, not 20
+    assert any("GAME_EVENT_TYPE_ACTOR_ENTER_SEAT" in e for _, _, e in sent)
+    assert len(sent) <= len(changing) + 1                         # unchanged frame is not resent
+    gaps = [b[0] - a[0] for a, b in zip(sent, sent[1:])]
+    assert min(gaps) >= 0.24

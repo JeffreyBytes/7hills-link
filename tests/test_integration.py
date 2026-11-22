@@ -108,7 +108,7 @@ def test_stream_and_upload(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(detect, "running_channel", lambda: "PTU")
     monkeypatch.setattr(protoset, "load", lambda exe: fds)
     monkeypatch.setattr(core.gamecfg, "env_enabled", lambda: True)
-    monkeypatch.setattr(core, "SEND_EVERY", 0.2)
+    monkeypatch.setattr(core, "MIN_GAP", 0.2)
 
     c = core.Core()
     t = threading.Thread(target=c.run, daemon=True)

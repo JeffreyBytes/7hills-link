@@ -5,6 +5,7 @@ Independent of the window, so it can be tested and run headless.
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 import webbrowser
@@ -12,7 +13,8 @@ import webbrowser
 from . import __version__, api, detect, gamecfg, protoset
 from .stream import GameStream
 
-SEND_EVERY = 1.0        # seconds between uploads while frames arrive
+MIN_GAP = 0.25          # at most 4 uploads a second; sent as soon as something changes
+TICK = 0.05             # how often the loop looks for news
 HEARTBEAT = 15.0        # upload at least this often while connected, even if nothing new
 SETTINGS_EVERY = 30.0   # refresh sharing settings from 7Net
 
@@ -208,29 +210,42 @@ class Core:
         self.ensure_stream()
         self.refresh_settings(force=True)
         last_sent_frame_at = 0.0
+        last_sent_json = ""
+        last_try = 0.0
+        backoff_until = 0.0
         last_scan = time.time()
         while not self._stop.is_set():
-            self._stop.wait(SEND_EVERY)
-            if time.time() - last_scan > 20:
+            self._stop.wait(TICK)
+            now = time.time()
+            if now - last_scan > 20:
                 self.scan()
                 self.ensure_stream()
                 last_scan = time.time()
             self.refresh_settings()
-            if not (self.token and self.stream):
+            if not (self.token and self.stream) or now < backoff_until or now - last_try < MIN_GAP:
+                continue
+            new_frame, has_events = self.stream.pending(last_sent_frame_at)
+            heartbeat = self.stream.connected and now - self.last_upload >= HEARTBEAT
+            if not (new_frame or has_events or heartbeat):
                 continue
             frame, at, events = self.stream.take()
-            fresh = frame is not None and at > last_sent_frame_at
-            if not fresh and not events and (not self.stream.connected or time.time() - self.last_upload < HEARTBEAT):
+            # The game sends ~17 frames a second; upload only when the content changed.
+            frame_json = json.dumps(frame, sort_keys=True, default=str) if frame is not None else ""
+            if frame_json == last_sent_json and not events and not heartbeat:
+                last_sent_frame_at = at
                 continue
+            last_try = now
             try:
                 api.ingest(self.token, frame, events)
                 self.last_upload, self.upload_error = time.time(), None
                 self.uploads += 1
-                last_sent_frame_at = at
+                last_sent_frame_at, last_sent_json = at, frame_json
             except api.ApiError as e:
                 self.upload_error = e.message
                 if e.status == 401:
                     self._lost_key()
+                elif e.status == 429:
+                    backoff_until = time.time() + 2.0
 
     def stop(self) -> None:
         self._stop.set()
