@@ -3,6 +3,7 @@
   --write-cfg <path>   (used by the client itself, elevated) add the telemetry lines to user.cfg
   --headless           run without a window, log status to the console
   --updated <version>  (used by the updater) started by the previous version after an update
+  --autostart          (used by the Windows Run entry) start hidden in the tray, no music
   --version
 """
 
@@ -52,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         updater.mark_ready()   # the swap script waits for this before it removes the backup
 
     from .app import run_window
-    return run_window(updated_from)
+    return run_window(updated_from, autostart="--autostart" in argv)
 
 
 if __name__ == "__main__":

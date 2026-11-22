@@ -99,15 +99,15 @@ def test_uploads_on_change_at_most_4_per_second(tmp_path, monkeypatch):
     assert min(gaps) >= 0.24
 
 
-def test_jingle_and_sound_settings(tmp_path, monkeypatch):
+def test_sound_and_prefs_survive_restart(tmp_path, monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     from sevenhills_link import core as core_mod
     c = core_mod.Core()
-    assert c.status()["sound"]["seq"] == 0
-    c.play_jingle("game"); c.play_jingle("game")          # second one within 10 min is skipped
-    assert c.status()["sound"]["seq"] == 1
-    c.play_jingle("linked", force=True)
-    assert c.status()["sound"] == {"muted": False, "volume": 0.6, "seq": 2, "reason": "linked"}
+    assert c.status()["sound"] == {"muted": False, "volume": 0.6}
+    assert c.status()["prefs"] == {"start_with_windows": True, "tray": True, "play_on_start": True}
+    c.prefs.set("play_on_start", False)
+    c.prefs.set("start_with_windows", False)          # no registry outside the packaged exe
     c.set_sound(muted=True, volume=1.7)
     c2 = core_mod.Core()
     assert c2.sound_muted and c2.sound_volume == 1.0
+    assert c2.prefs.as_dict() == {"start_with_windows": False, "tray": True, "play_on_start": False}
