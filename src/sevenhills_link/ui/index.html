@@ -48,6 +48,10 @@
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--mute); cursor: pointer; font: inherit; font-size: 12px; }
   .chip.on { border-color: var(--gold); color: var(--text); background: rgba(240,180,67,.12); }
+  .social { display: flex; gap: 8px; flex-wrap: wrap; }
+  .social button { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
+  .social button:hover { border-color: var(--gold); }
+  .social svg { width: 15px; height: 15px; fill: var(--gold); }
   .hidden { display: none !important; }
   .err { color: var(--crit); font-size: 13px; }
 </style>
@@ -144,6 +148,18 @@
         <button class="btn outline small" onclick="playJingle(true)">Play</button>
       </div>
       <audio id="jingle" src="{{INTRO_SRC}}" preload="auto"></audio>
+
+      <div class="card">
+        <div class="row" style="margin-bottom:10px"><span style="font-weight:600">7Hills Industries</span><span class="dim" style="font-size:12px">follow the org</span></div>
+        <div class="social">
+          <button onclick="api('open_link','site')"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2c.9 1.1 1.6 2.5 2 4h-4c.4-1.5 1.1-2.9 2-4ZM4.3 14a8 8 0 0 1 0-4h3.5a15 15 0 0 0 0 4H4.3Zm5.5 0a13 13 0 0 1 0-4h4.4a13 13 0 0 1 0 4H9.8Zm6.4 0a15 15 0 0 0 0-4h3.5a8 8 0 0 1 0 4h-3.5ZM12 20c-.9-1.1-1.6-2.5-2-4h4c-.4 1.5-1.1 2.9-2 4Z"/></svg>7hills.space</button>
+          <button onclick="api('open_link','discord')"><svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>Discord</button>
+          <button onclick="api('open_link','youtube')"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Zm6 3v8l6-4-6-4Z"/></svg>YouTube</button>
+          <button onclick="api('open_link','spotify')"><svg viewBox="0 0 24 24"><path d="M9 18.5V7.2l11-2.2v11.6a2.6 2.6 0 1 1-2-2.5V8.9l-7 1.4v8.2a2.6 2.6 0 1 1-2-2.5v2.5Z"/></svg>Spotify</button>
+          <button onclick="api('open_link','apple')"><svg viewBox="0 0 24 24"><path d="M9 18.5V7.2l11-2.2v11.6a2.6 2.6 0 1 1-2-2.5V8.9l-7 1.4v8.2a2.6 2.6 0 1 1-2-2.5v2.5Z"/></svg>Apple Music</button>
+          <button onclick="api('open_link','rsi')"><svg viewBox="0 0 24 24"><path d="M12 2 4 6v6c0 5 3.4 9.3 8 10 4.6-.7 8-5 8-10V6l-8-4Z"/></svg>RSI org page</button>
+        </div>
+      </div>
 
       <div class="card row">
         <div class="grow"><div style="font-weight:600">Game channel</div><div class="dim" style="font-size:12px" id="chHint">Which install to read from</div></div>

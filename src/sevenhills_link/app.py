@@ -13,6 +13,16 @@ from .paths import resource
 
 SITE = "https://www.7hills.space"
 
+# The org's channels, as on the 7Net public site (lib/cms.ts). Only these open from the window.
+LINKS = {
+    "site": SITE,
+    "discord": "https://discord.gg/7hills",
+    "youtube": "https://www.youtube.com/@7hillsindustries",
+    "spotify": "https://open.spotify.com/artist/2Y8asDjzVsVYEUFS1xnyk9",
+    "apple": "https://music.apple.com/us/artist/7hills-industries/1843073599",
+    "rsi": "https://robertsspaceindustries.com/en/orgs/7HILLS",
+}
+
 
 class JsApi:
     """Methods the page calls through window.pywebview.api."""
@@ -64,6 +74,11 @@ class JsApi:
 
     def set_sound(self, muted=None, volume=None):
         return self._core.set_sound(muted if muted is None else bool(muted), volume if volume is None else float(volume))
+
+    def open_link(self, key):
+        url = LINKS.get(str(key))
+        if url:
+            webbrowser.open(url)
 
     def open_dashboard(self):
         webbrowser.open(SITE + "/live")
