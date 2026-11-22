@@ -42,12 +42,33 @@ jobs:
           --add-data "src/sevenhills_link/ui;sevenhills_link/ui"
           --collect-submodules sevenhills_link
           --hidden-import keyring.backends.Windows
+          --hidden-import pystray._win32
           run_client.py
       - name: Smoke test
         shell: pwsh
         run: |
           $v = & .\dist\7HillsLink.exe --version | Out-String
           Write-Host "version: $v"
+      - name: Update swap test
+        shell: pwsh
+        run: |
+          $d = Join-Path $env:RUNNER_TEMP 'swaptest'
+          New-Item -ItemType Directory -Force $d, "$d\lad" | Out-Null
+          Copy-Item dist/7HillsLink.exe "$d\7HillsLink.exe"
+          Copy-Item dist/7HillsLink.exe "$d\new.exe"
+          $dummy = Start-Process ping -ArgumentList '-n','3','127.0.0.1' -PassThru -WindowStyle Hidden
+          $env:LOCALAPPDATA = "$d\lad"
+          $env:PYTHONPATH = 'src'
+          python -c "import sys; from pathlib import Path; from sevenhills_link import updater; p=updater.update_dir()/'swap.ps1'; p.write_text(updater.swap_script(Path(sys.argv[1]), Path(sys.argv[2]), [int(sys.argv[3])]), encoding='utf-8-sig'); print(p)" "$d\7HillsLink.exe" "$d\new.exe" $dummy.Id
+          $script = "$d\lad\7HillsLink\update\swap.ps1"
+          $errs = $null; [System.Management.Automation.Language.Parser]::ParseFile($script, [ref]$null, [ref]$errs) | Out-Null
+          if ($errs.Count) { $errs; exit 1 }
+          $p = Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',$script -PassThru -WindowStyle Hidden
+          $p | Wait-Process -Timeout 90
+          Get-Content "$d\lad\7HillsLink\update\update.log"
+          Get-Process 7HillsLink -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not (Select-String -Path "$d\lad\7HillsLink\update\update.log" -Pattern ' updated$' -Quiet)) { Write-Error 'swap did not complete'; exit 1 }
+          if (-not (Test-Path "$d\7HillsLink.old.exe")) { Write-Error 'no backup kept'; exit 1 }
       - name: Checksum
         shell: pwsh
         run: |

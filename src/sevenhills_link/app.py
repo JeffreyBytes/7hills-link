@@ -102,6 +102,7 @@ def run_window(updated_from: str | None = None) -> int:
     def install(new_exe):
         # Swaps the exe and starts the new one; on success close this window and exit.
         if updater.install(new_exe):
+            tray.stop()
             core.stop()
             try:
                 window.destroy()
@@ -109,12 +110,46 @@ def run_window(updated_from: str | None = None) -> int:
                 os._exit(0)
     core.updates.install_hook = install
 
+    # Tray: minimizing hides the window; the gold 7 in the tray brings it back.
+    from .tray import Tray
+
+    def show_window():
+        try:
+            window.show()
+            window.restore()
+        except Exception:
+            pass
+
+    def quit_app():
+        tray.stop()
+        core.stop()
+        try:
+            window.destroy()
+        except Exception:
+            os._exit(0)
+
+    tray = Tray(show_window, lambda: webbrowser.open(SITE + "/live"), quit_app)
+    if tray.available:
+        window.events.minimized += lambda *_: window.hide()
+
+    def tray_title_loop():
+        while True:
+            try:
+                st = core.status()
+                state = "in game" if st.get("game_connected") else "game not running"
+                tray.set_title(f"7Hills Link v{st.get('version')} · {state}")
+            except Exception:
+                pass
+            threading.Event().wait(5)
+
     def started():
         threading.Thread(target=core.run, name="core", daemon=True).start()
+        tray.start()
+        threading.Thread(target=tray_title_loop, name="tray-title", daemon=True).start()
         if updated_from:
-            updater.mark_ready()   # tells the previous version the update worked
             threading.Thread(target=updater.cleanup, name="update-cleanup", daemon=True).start()
 
     webview.start(started)
+    tray.stop()
     core.stop()
     return 0

@@ -69,3 +69,14 @@ def test_source_build_never_installs():
     assert updater.can_install() is False
     with pytest.raises(updater.UpdateError):
         updater.install(updater.update_dir() / "x.exe")
+
+
+def test_swap_script(tmp_path, monkeypatch):
+    from pathlib import Path
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    cur = Path("C:/Users/o'brien/7HillsLink/7HillsLink.exe")
+    s = updater.swap_script(cur, Path("C:/x/7HillsLink-9.9.9.exe"), [123, 456])
+    assert "$pids = @(123,456)" in s
+    assert "o''brien" in s and "7HillsLink.old.exe" in s      # quotes escaped for PowerShell
+    assert "'--updated','" + updater.__version__ + "'" in s
+    assert "{" not in s.split("function Log")[0].replace("@(", "")  # all placeholders filled

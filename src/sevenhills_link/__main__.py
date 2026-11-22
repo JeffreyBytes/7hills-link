@@ -48,6 +48,8 @@ def main(argv: list[str] | None = None) -> int:
     if "--updated" in argv:
         i = argv.index("--updated")
         updated_from = argv[i + 1] if i + 1 < len(argv) else "?"
+        from . import updater
+        updater.mark_ready()   # the swap script waits for this before it removes the backup
 
     from .app import run_window
     return run_window(updated_from)
