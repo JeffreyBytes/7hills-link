@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+from collections import deque
 import webbrowser
 
 from . import __version__, api, detect, gamecfg, protoset, updater
@@ -40,6 +41,14 @@ def _summary(frame: dict | None) -> dict:
             "power_on": all((vs.get("power") or {}).get(k, True) for k in ("powerplants", "engines")),
         })
     return out
+
+
+def _smooth(prev: float | None, value: float, k: float = 0.2) -> float:
+    return value if prev is None else prev + k * (value - prev)
+
+
+def _r3(v: float | None) -> float | None:
+    return None if v is None else round(v, 3)
 
 
 class Updates:
@@ -148,6 +157,9 @@ class Core:
         self.uploads = 0
         self._last_settings = 0.0
         self._stop = threading.Event()
+        self._traffic: deque = deque(maxlen=120)   # (time, bytes out, bytes in), one per tick second
+        self.delay_wait = None    # s from the game's frame to the start of its upload (smoothed)
+        self.delay_upload = None  # s the upload to 7Net took (smoothed)
 
     # ---------------------------------------------------------------- setup
 
@@ -346,8 +358,12 @@ class Core:
                 last_sent_frame_at = at
                 continue
             last_try = now
+            t0 = time.time()
             try:
                 api.ingest(self.token, frame, events)
+                t1 = time.time()
+                self.delay_wait = _smooth(self.delay_wait, max(0.0, t0 - at)) if at else self.delay_wait
+                self.delay_upload = _smooth(self.delay_upload, t1 - t0)
                 self.last_upload, self.upload_error = time.time(), None
                 self.uploads += 1
                 last_sent_frame_at, last_sent_json = at, frame_json
@@ -373,6 +389,16 @@ class Core:
             pass
         return self.status()
 
+    def traffic_rate(self) -> dict:
+        """KB/s to and from 7Net over the last ~10 s."""
+        now = time.time()
+        if not self._traffic or now - self._traffic[-1][0] >= 1:
+            self._traffic.append((now, api.traffic["out"], api.traffic["in"]))
+        old = next((t for t in self._traffic if now - t[0] <= 10), self._traffic[0])
+        span = max(1.0, now - old[0])
+        return {"up": round((api.traffic["out"] - old[1]) / span / 1024, 1),
+                "down": round((api.traffic["in"] - old[2]) / span / 1024, 1)}
+
     def stop(self) -> None:
         self._stop.set()
         if self.stream:
@@ -394,6 +420,8 @@ class Core:
                 "sound": {"muted": self.sound_muted, "volume": self.sound_volume, "repeat": self.sound_repeat},
                 "channels_known": detect.CHANNELS,
                 "prefs": self.prefs.as_dict(),
+                "traffic": self.traffic_rate(),
+                "delay": {"wait": _r3(self.delay_wait), "upload": _r3(self.delay_upload)},
                 "can_autostart": updater.can_install(),
                 "update_checked_ago": round(time.time() - self.updates.checked_at) if self.updates.checked_at else None,
                 "installs": [i.as_dict() for i in self.installs],

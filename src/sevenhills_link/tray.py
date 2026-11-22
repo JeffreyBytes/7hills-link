@@ -9,29 +9,25 @@ from __future__ import annotations
 from typing import Callable
 
 GOLD = (240, 180, 67, 255)
-DARK = (13, 13, 13, 255)
+
+
+# The 7Hills "7" (same shape as the 7Net app icon), on a 512 grid.
+LOGO = [(65, 91), (446, 91), (256, 421), (214, 349), (325, 157), (103, 157)]
 
 
 def icon_image(size: int = 64):
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw
 
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    big = size * 4   # draw large and scale down for smooth edges
+    img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    r = size // 5
-    d.rounded_rectangle([0, 0, size - 1, size - 1], radius=r, fill=GOLD)
-    font = None
-    for name in ("arialbd.ttf", "segoeuib.ttf", "DejaVuSans-Bold.ttf"):
-        try:
-            font = ImageFont.truetype(name, int(size * 0.78))
-            break
-        except OSError:
-            continue
-    if font is None:
-        font = ImageFont.load_default()
-    box = d.textbbox((0, 0), "7", font=font)
-    w, h = box[2] - box[0], box[3] - box[1]
-    d.text(((size - w) / 2 - box[0], (size - h) / 2 - box[1]), "7", font=font, fill=DARK)
-    return img
+    # Stretch the shape to fill the icon: its bounding box is x 65..446, y 91..421.
+    x0, x1, y0, y1 = 65, 446, 91, 421
+    scale = big * 0.96 / max(x1 - x0, y1 - y0)
+    ox = (big - (x1 - x0) * scale) / 2
+    oy = (big - (y1 - y0) * scale) / 2
+    d.polygon([(ox + (x - x0) * scale, oy + (y - y0) * scale) for x, y in LOGO], fill=GOLD)
+    return img.resize((size, size), Image.LANCZOS)
 
 
 class Tray:
