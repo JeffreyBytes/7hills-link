@@ -6,6 +6,7 @@ Independent of the window, so it can be tested and run headless.
 from __future__ import annotations
 
 import json
+import sys
 import threading
 import time
 from collections import deque
@@ -122,7 +123,7 @@ class Core:
         self.installs: list[detect.Install] = []
         self.channel: str | None = None
         self.cfg_state: dict[str, dict] = {}
-        self.env_ok = False
+        self.env_ok: bool | None = False
         self.needs_restart = False
         self.stream: GameStream | None = None
         self.stream_exe: str | None = None
@@ -164,7 +165,7 @@ class Core:
     # ---------------------------------------------------------------- setup
 
     def scan(self) -> None:
-        installs = detect.apply_choices(detect.find_installs(), self.game_paths)
+        installs = detect.apply_choices(detect.find_installs(detect.user_roots()), self.game_paths)
         running = detect.running_channel()
         with self.lock:
             self.installs = installs
@@ -210,7 +211,7 @@ class Core:
 
     def enable_telemetry(self) -> dict:
         """Write user.cfg for every install found, and the user environment variable."""
-        result = {"changed": [], "needs_admin": [], "errors": []}
+        result = {"changed": [], "needs_admin": [], "errors": [], "env_howto": None}
         for inst in self.installs:
             try:
                 if gamecfg.apply(inst.user_cfg):
@@ -222,11 +223,15 @@ class Core:
                     result["errors"].append(inst.channel + ": no permission")
             except Exception as e:
                 result["errors"].append(f"{inst.channel}: {e}")
-        try:
-            if not gamecfg.env_enabled():
-                gamecfg.enable_env()
-        except Exception as e:
-            result["errors"].append(f"environment: {e}")
+        if gamecfg.env_manual():
+            if gamecfg.env_enabled() is not True:
+                result["env_howto"] = gamecfg.ENV_HOWTO
+        else:
+            try:
+                if not gamecfg.env_enabled():
+                    gamecfg.enable_env()
+            except Exception as e:
+                result["errors"].append(f"environment: {e}")
         if result["changed"] or result["needs_admin"]:
             self.needs_restart = True
         time.sleep(1.5 if result["needs_admin"] else 0)
@@ -429,7 +434,10 @@ class Core:
                 "game_found": inst is not None,
                 "cfg_ok": inst is not None and not cfg.get("missing"),
                 "cfg_missing": list((cfg.get("missing") or {}).keys()),
-                "env_ok": self.env_ok,
+                "env_ok": self.env_ok,            # None: not Windows and the game is not running to check
+                "env_manual": gamecfg.env_manual(),
+                "env_howto": gamecfg.ENV_HOWTO if gamecfg.env_manual() else None,
+                "platform": "windows" if detect.IS_WINDOWS else sys.platform,
                 "needs_restart": self.needs_restart,
                 "proto_error": self.proto_error,
                 "game_connected": bool(self.stream and self.stream.connected),

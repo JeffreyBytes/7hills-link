@@ -2,6 +2,9 @@
 
   --write-cfg <path>   (used by the client itself, elevated) add the telemetry lines to user.cfg
   --headless           run without a window, log status to the console
+  --game-dir <path>    a Star Citizen folder to look in (repeatable): the StarCitizen folder,
+                       a channel folder, StarCitizen.exe or a whole Wine prefix. Same as
+                       SEVENHILLS_SC_DIR (separate several with the OS path separator).
   --updated <version>  (used by the updater) started by the previous version after an update
   --autostart          (used by the Windows Run entry) start hidden in the tray, no music
   --install-to <exe> --wait <pids> --from-version <v>   (used by the updater) put this exe in place of <exe>
@@ -16,9 +19,33 @@ import sys
 from pathlib import Path
 
 
+def _take_game_dirs(argv: list[str]) -> list[str]:
+    """Remove --game-dir <path> / --game-dir=<path> from argv and return the paths."""
+    dirs: list[str] = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--game-dir" and i + 1 < len(argv):
+            dirs.append(argv[i + 1])
+            del argv[i:i + 2]
+        elif a.startswith("--game-dir="):
+            dirs.append(a.split("=", 1)[1])
+            del argv[i]
+        else:
+            i += 1
+    return dirs
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     from . import __version__
+
+    game_dirs = _take_game_dirs(argv)
+    if game_dirs:
+        import os
+        from .detect import ENV_DIR
+        old = [p for p in os.environ.get(ENV_DIR, "").split(os.pathsep) if p]
+        os.environ[ENV_DIR] = os.pathsep.join(game_dirs + old)
 
     if "--version" in argv:
         print(__version__)
