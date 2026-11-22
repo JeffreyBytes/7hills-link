@@ -5,3 +5,4 @@ keyring>=24
 psutil>=5.9
 pystray>=0.19
 pillow>=10
+pywin32>=306; sys_platform == "win32"

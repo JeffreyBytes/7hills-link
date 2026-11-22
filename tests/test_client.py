@@ -104,13 +104,13 @@ def test_sound_and_prefs_survive_restart(tmp_path, monkeypatch):
     from sevenhills_link import core as core_mod
     c = core_mod.Core()
     assert c.status()["sound"] == {"muted": False, "volume": 0.1, "repeat": False}
-    assert c.status()["prefs"] == {"start_with_windows": True, "tray": True, "play_on_start": True}
+    assert c.status()["prefs"] == {"start_with_windows": True, "tray": True, "play_on_start": True, "install_declined": False}
     c.prefs.set("play_on_start", False)
     c.prefs.set("start_with_windows", False)          # no registry outside the packaged exe
     c.set_sound(muted=True, volume=1.7)
     c2 = core_mod.Core()
     assert c2.sound_muted and c2.sound_volume == 1.0
-    assert c2.prefs.as_dict() == {"start_with_windows": False, "tray": True, "play_on_start": False}
+    assert c2.prefs.as_dict() == {"start_with_windows": False, "tray": True, "play_on_start": False, "install_declined": False}
 
 
 def test_chosen_game_path_wins(tmp_path, monkeypatch):
@@ -126,3 +126,33 @@ def test_chosen_game_path_wins(tmp_path, monkeypatch):
     assert out[1].source == "chosen" and out[1].exe == picked
     assert detect.install_from_exe(tmp_path / "nope.exe") is None
     assert detect.apply_choices([auto], {"PTU": str(tmp_path / "gone.exe")})[0].source == "auto"
+
+
+def test_single_instance_and_install_are_noops_off_windows(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    from sevenhills_link import install, instance
+    assert instance.acquire() is True and instance.signal_running() is False
+    assert install.needs_install(False) is False          # not the packaged Windows exe
+    assert install.install(True, True, True, True) == "Installing works only in the packaged 7HillsLink.exe"
+    assert install.install_dir() == tmp_path / "Programs" / "7HillsLink"
+
+
+def test_log_writes_uncaught_errors(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    import sys
+    from sevenhills_link import log as logmod
+    logmod.log.handlers.clear()
+    old = sys.excepthook
+    try:
+        logmod.setup()
+        try:
+            raise RuntimeError("boom")
+        except RuntimeError:
+            sys.excepthook(*sys.exc_info())
+        for h in logmod.log.handlers:
+            h.flush()
+        assert "boom" in (tmp_path / "7HillsLink" / "link.log").read_text()
+    finally:
+        sys.excepthook = old
+        for h in list(logmod.log.handlers):
+            h.close(); logmod.log.removeHandler(h)

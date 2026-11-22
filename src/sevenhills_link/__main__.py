@@ -5,6 +5,8 @@
   --updated <version>  (used by the updater) started by the previous version after an update
   --autostart          (used by the Windows Run entry) start hidden in the tray, no music
   --install-to <exe> --wait <pids> --from-version <v>   (used by the updater) put this exe in place of <exe>
+  --installed          (used by the installer) first start of the installed copy
+  --remove-old <exe>   (used by the installer) delete the copy it was installed from
   --version
 """
 
@@ -61,6 +63,23 @@ def main(argv: list[str] | None = None) -> int:
         updated_from = argv[i + 1] if i + 1 < len(argv) else "?"
         from . import updater
         updater.mark_ready()   # the swap script waits for this before it removes the backup
+
+    from . import instance
+    from .log import log, setup
+    setup()
+    # One 7Hills Link at a time. After an install or update the old one may still be closing.
+    waiting = "--installed" in argv or updated_from is not None
+    if not instance.acquire(wait=15.0 if waiting else 0.0):
+        if "--autostart" not in argv:
+            instance.signal_running()   # show the window of the one that runs
+        log.info("already running; %s", "stayed hidden" if "--autostart" in argv else "showed its window")
+        return 0
+    log.info("start %s %s", __version__, " ".join(argv))
+    if "--remove-old" in argv:
+        from .install import remove_old_copy
+        i = argv.index("--remove-old")
+        if i + 1 < len(argv):
+            remove_old_copy(argv[i + 1])
 
     from .app import run_window
     return run_window(updated_from, autostart="--autostart" in argv)

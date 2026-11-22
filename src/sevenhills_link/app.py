@@ -6,7 +6,8 @@ import os
 import threading
 import webbrowser
 
-from . import updater
+from . import install as installer
+from . import instance, updater
 from .core import Core
 from .paths import resource
 from .prefs import DEFAULTS, apply_startup
@@ -32,11 +33,20 @@ class JsApi:
         self._autostart = autostart
         self._window = None   # set once the window exists; needed for the file dialog
         self._path_error: str | None = None
+        self._install_error: str | None = None
+        self._quit = None      # set by run_window
 
     def status(self):
         s = self._core.status()
         s["autostarted"] = self._autostart
         s["path_error"] = self._path_error
+        s["install"] = {
+            "offer": installer.needs_install(self._core.prefs.get("install_declined")),
+            "installed": installer.is_installed_copy(),
+            "packaged": installer.is_packaged(),
+            "target": str(installer.install_dir()),
+            "error": self._install_error,
+        }
         return s
 
     def enable_telemetry(self):
@@ -111,6 +121,26 @@ class JsApi:
         if url:
             webbrowser.open(url)
 
+    def quit(self):
+        if self._quit:
+            threading.Thread(target=self._quit, daemon=True).start()
+
+    def install_app(self, start_menu=True, desktop=True, remove_old=True):
+        err = installer.install(bool(start_menu), bool(desktop), bool(remove_old), self._core.prefs.get("start_with_windows"))
+        self._install_error = err
+        if err is None:
+            self.quit()   # the installed copy is starting; it waits for this one to close
+        return self.status()
+
+    def decline_install(self):
+        self._core.prefs.set("install_declined", True)
+        return self.status()
+
+    def uninstall_app(self):
+        installer.uninstall()
+        self._core.prefs.set("start_with_windows", False)
+        self.quit()
+
     def open_dashboard(self):
         webbrowser.open(SITE + "/live")
 
@@ -156,6 +186,8 @@ def run_window(updated_from: str | None = None, autostart: bool = False) -> int:
         core.set_sound(muted=not core.sound_muted)
 
     tray = Tray(show_window, lambda: webbrowser.open(SITE + "/live"), quit_app, toggle_mute, lambda: core.sound_muted)
+    js_api._quit = quit_app
+    instance.listen(show_window)   # a second start shows this window instead of running twice
 
     def to_tray() -> bool:
         return tray.available and core.prefs.get("tray") and not quitting.is_set()
