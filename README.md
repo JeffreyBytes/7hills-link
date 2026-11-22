@@ -15,7 +15,8 @@ Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star 
    ```
 3. **Reads the API definitions from your installed `StarCitizen.exe`**, so it keeps working after patches.
 4. **Links this PC to your 7Net account**: shows a code, opens 7hills.space/link, you press *Connect this PC*. The key is stored in Windows Credential Manager.
-5. **Streams** from the game's local server (`127.0.0.1:50051`, never exposed to the network) and sends the latest state to 7Net about once a second.
+5. **Streams** from the game's local server (`127.0.0.1:50051`, never exposed to the network) and sends the state to 7Net as soon as it changes (at most four times a second).
+6. **Runs in the tray**: minimizing or closing hides the window behind a gold 7 in the notification area; quit from its menu. It starts with Windows (hidden, no music) unless you switch that off under Settings.
 
 ## What the game's telemetry offers
 
@@ -23,7 +24,7 @@ See **[docs/TELEMETRY.md](docs/TELEMETRY.md)** for everything we have found: how
 
 ## Updates
 
-From v0.4.0 the client checks this repository's latest release at start and every 6 hours, downloads a newer `7HillsLink.exe` and checks its SHA-256 against the release. It installs by itself when the game is not running (you can switch that off and press *Restart now* instead): the running exe is renamed to `7HillsLink.old.exe`, the new one takes its place and starts, and the old one is put back if the new one does not start within 20 seconds. Keep the exe in a folder you can write to, such as Downloads or Desktop.
+From v0.4.0 the client checks this repository's latest release at start and every 6 hours, downloads a newer `7HillsLink.exe` and checks its SHA-256 against the release. It installs by itself when the game is not running (you can switch that off under Settings and press *Restart now* instead). The client closes and a small PowerShell script swaps the exe (the old one is kept as `7HillsLink.old.exe`), starts the new one, and puts the old one back if the new one does not start within 20 seconds. The steps are logged in `%LOCALAPPDATA%\7HillsLink\update\update.log`. v0.4.0 and v0.4.1 cannot update themselves; install v0.4.2 or later by hand once. Keep the exe in a folder you can write to, such as Downloads or Desktop.
 
 ## What it does not do
 

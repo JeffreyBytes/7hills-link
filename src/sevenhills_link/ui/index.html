@@ -54,6 +54,31 @@
   .social svg { width: 15px; height: 15px; fill: var(--gold); }
   .hidden { display: none !important; }
   .err { color: var(--crit); font-size: 13px; }
+  .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; padding: 0; }
+  .icon-btn:hover { border-color: var(--gold); }
+  .icon-btn.on { border-color: var(--gold); color: var(--gold); }
+  .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .mode { text-align: left; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text); padding: 10px 12px; cursor: pointer; font: inherit; }
+  .mode:hover:not(:disabled) { border-color: rgba(240,180,67,.5); }
+  .mode.on { border-color: var(--gold); background: rgba(240,180,67,.08); }
+  .mode.on .mt { color: var(--gold); }
+  .mode:disabled { cursor: default; opacity: .5; }
+  .mt { font-weight: 600; font-size: 15px; }
+  .mi { font-size: 12px; margin-top: 3px; display: flex; gap: 6px; align-items: center; }
+  .mi.y { color: var(--ok); } .mi.n { color: #555; }
+  .extras { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; padding-top: 10px; margin-top: 12px; border-top: 1px solid var(--line); font-size: 13px; }
+  .extras label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  .extras input { accent-color: var(--gold); width: 16px; height: 16px; }
+  .extras.off { opacity: .4; pointer-events: none; }
+  .settings { display: grid; grid-template-columns: 180px minmax(0, 1fr); min-height: 0; }
+  .settings nav { background: var(--bg2); border-right: 1px solid var(--line); padding: 20px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .settings nav button { text-align: left; border: 0; background: transparent; color: var(--mute); font: inherit; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+  .settings nav button:hover { color: var(--text); }
+  .settings nav button.on { background: var(--line); color: var(--gold); }
+  .srow { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .srow:first-of-type { border-top: 0; padding-top: 4px; }
+  .switch:disabled { cursor: default; opacity: .4; }
 </style>
 </head>
 <body>
@@ -62,8 +87,10 @@
     <div class="logo">7</div><span class="name">7Hills Link</span><span class="ver" id="ver"></span>
     <span class="grow"></span>
     <button class="link" onclick="api('open_dashboard')">Open my dashboard ↗</button>
+    <button class="icon-btn" id="gearBtn" onclick="toggleSettings()" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
   </header>
-  <main>
+
+  <main id="mainView">
     <aside>
       <div class="row" id="member">
         <div style="width:44px;height:44px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;color:var(--gold);font:600 15px 'Barlow Condensed'" id="ini">?</div>
@@ -83,12 +110,10 @@
     <section>
       <div class="card gold hidden" id="updCard">
         <div class="row">
-          <div class="grow"><div style="font-weight:600;font-size:15px" id="updTitle">Update ready</div>
+          <div class="grow"><div style="font-weight:600;font-size:15px" id="updTitle"></div>
             <div class="muted" style="font-size:13px" id="updText"></div></div>
-          <button class="btn small" id="updBtn" onclick="call('update_now')">Restart now</button>
+          <button class="btn small" id="updBtn" onclick="updAction()"></button>
         </div>
-        <label style="display:flex;gap:10px;align-items:center;font-size:13px;cursor:pointer;margin-top:10px"><input type="checkbox" id="updAuto" style="accent-color:var(--gold)" onchange="call('set_auto_update', this.checked)"> Install updates automatically when the game is not running</label>
-        <p class="err" id="updErr" style="margin:6px 0 0"></p>
       </div>
 
       <div class="card gold hidden" id="linkCard">
@@ -119,35 +144,34 @@
         <b>Restart Star Citizen</b> <span class="muted">so it picks up the new settings. Quit the RSI Launcher fully (tray icon → Quit) and start it again.</span>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:4px">
-        <h1 style="font-size:26px;font-weight:600">Who can see your telemetry</h1>
-        <span class="muted">Your own dashboard always. Org Command sees what you choose below. Live data is deleted after 24 hours.</span>
-      </div>
-
       <div class="card">
-        <div class="row">
-          <div class="grow"><div style="font-weight:600;font-size:15px">Share with Org Command</div><div class="muted" style="font-size:13px" id="shareHelp"></div></div>
-          <div class="seg" id="shareSeg" role="radiogroup" aria-label="Share with Org Command">
-            <button type="button" role="radio" data-mode="off" onclick="setMode('off')">Off</button>
-            <button type="button" role="radio" data-mode="online" onclick="setMode('online')">Online only</button>
-            <button type="button" role="radio" data-mode="full" onclick="setMode('full')">Full</button>
-          </div>
+        <h1 style="font-size:24px;font-weight:600">Who can see your telemetry</h1>
+        <p class="muted" style="margin:4px 0 12px;font-size:13px">You always see everything on your own dashboard. This decides what Org Command (manager and up) sees. Live data is deleted after 24 hours.</p>
+        <div class="modes" id="modes" role="radiogroup" aria-label="Share with Org Command">
+          <button type="button" class="mode" role="radio" data-mode="off" onclick="setMode('off')"><div class="mt">Off</div><div class="dim" style="font-size:12px;margin-bottom:4px">Invisible to the org</div></button>
+          <button type="button" class="mode" role="radio" data-mode="online" onclick="setMode('online')"><div class="mt">Online only</div><div class="dim" style="font-size:12px;margin-bottom:4px">A green dot, nothing else</div></button>
+          <button type="button" class="mode" role="radio" data-mode="full" onclick="setMode('full')"><div class="mt">Full</div><div class="dim" style="font-size:12px;margin-bottom:4px">Shown on the Command map</div></button>
         </div>
-        <div class="opts hidden" id="shareOpts">
-          <label><input type="checkbox" checked disabled> Ship status &amp; systems</label>
-          <label><input type="checkbox" checked disabled> Seat &amp; crew role</label>
-          <label><input type="checkbox" id="optVitals" onchange="share({share_vitals:this.checked})"> Health &amp; vitals</label>
+        <div class="extras" id="extras">
+          <span class="dim">Also share with Full:</span>
+          <label><input type="checkbox" id="optVitals" onchange="share({share_vitals:this.checked})"> Health and vitals</label>
           <label><input type="checkbox" id="optUec" onchange="share({share_uec:this.checked})"> aUEC balance</label>
         </div>
+        <p class="dim hidden" id="shareLinkHint" style="margin:10px 0 0;font-size:13px">Link this PC first.</p>
       </div>
 
-      <div class="card row">
-        <div class="grow"><div style="font-weight:600">Sound</div><div class="dim" style="font-size:12px">The 7Hills jingle when the game connects and when you link this PC</div></div>
-        <button class="link" id="sndMute" onclick="call('set_sound', !(S && S.sound && S.sound.muted), null)"></button>
-        <input type="range" id="sndVol" min="0" max="100" step="1" style="width:130px;accent-color:var(--gold)" oninput="jingle.volume=this.value/100" onchange="call('set_sound', null, this.value/100)">
-        <button class="btn outline small" onclick="playJingle(true)">Play</button>
+      <div class="card row" style="padding:12px 16px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F0B443" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span style="font-weight:600">Peacekeepers</span>
+        <span class="dim mono" style="font-size:12px" id="sndTime">0:00 / 0:00</span>
+        <span class="grow"></span>
+        <button class="icon-btn" id="sndMute" onclick="toggleMute()" aria-label="Mute"></button>
+        <input type="range" id="sndVol" min="0" max="100" step="1" style="width:130px;accent-color:var(--gold)" oninput="setVolume(this.value)" onchange="call('set_sound', null, this.value/100)">
+        <span class="dim" style="font-size:12px;min-width:34px" id="sndPct"></span>
+        <button class="icon-btn" id="sndPlay" onclick="togglePlay()" aria-label="Play"></button>
+        <button class="icon-btn" onclick="stopMusic()" aria-label="Stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
       </div>
-      <audio id="jingle" src="{{INTRO_SRC}}" preload="auto"></audio>
+      <audio id="music" src="music.mp3" preload="auto"></audio>
 
       <div class="card">
         <div class="row" style="margin-bottom:10px"><span style="font-weight:600">7Hills Industries</span><span class="dim" style="font-size:12px">follow the org</span></div>
@@ -160,19 +184,47 @@
           <button onclick="api('open_link','rsi')"><svg viewBox="0 0 24 24"><path d="M12 2 4 6v6c0 5 3.4 9.3 8 10 4.6-.7 8-5 8-10V6l-8-4Z"/></svg>RSI org page</button>
         </div>
       </div>
+    </section>
+  </main>
 
-      <div class="card row">
-        <div class="grow"><div style="font-weight:600">Game channel</div><div class="dim" style="font-size:12px" id="chHint">Which install to read from</div></div>
-        <div class="chips" id="channels"></div>
+  <main id="settingsView" class="settings hidden">
+    <nav>
+      <button class="on" data-sec="secGeneral" onclick="goSec(this)">General</button>
+      <button data-sec="secGame" onclick="goSec(this)">Game</button>
+      <button data-sec="secUpdates" onclick="goSec(this)">Updates</button>
+      <button data-sec="secAccount" onclick="goSec(this)">Account</button>
+      <span class="grow"></span>
+      <button onclick="toggleSettings()">← Back</button>
+    </nav>
+    <section id="settingsScroll">
+      <h1 style="font-size:26px;font-weight:600">Settings</h1>
+
+      <div class="card" id="secGeneral">
+        <span class="label">General</span>
+        <div class="srow"><div class="grow"><div>Start with Windows</div><div class="dim" style="font-size:12px" id="startHint">Opens minimized in the tray, no music</div></div><button class="switch" id="prefStart" onclick="togglePref('start_with_windows')" aria-label="Start with Windows"><span></span></button></div>
+        <div class="srow"><div class="grow"><div>Minimize to tray</div><div class="dim" style="font-size:12px">Keeps running when the window is minimized or closed. Quit from the gold 7 in the tray.</div></div><button class="switch" id="prefTray" onclick="togglePref('tray')" aria-label="Minimize to tray"><span></span></button></div>
+        <div class="srow"><div class="grow"><div>Play music on start</div><div class="dim" style="font-size:12px">Mute and volume are on the main view</div></div><button class="switch" id="prefMusic" onclick="togglePref('play_on_start')" aria-label="Play music on start"><span></span></button></div>
       </div>
 
-      <div class="row dim" style="font-size:12px;margin-top:auto">
-        <span id="footer"></span><span class="grow"></span>
-        <button class="link hidden" id="unlinkBtn" style="color:var(--dim)" onclick="if(confirm('Unlink this PC from 7Net?')) call('unlink')">Unlink this PC</button>
+      <div class="card" id="secGame">
+        <span class="label">Game</span>
+        <div class="srow"><div class="grow"><div>Game channel</div><div class="dim" style="font-size:12px" id="chHint">Which install to read from</div></div><div class="chips" id="channels"></div></div>
+      </div>
+
+      <div class="card" id="secUpdates">
+        <span class="label">Updates</span>
+        <div class="srow"><div class="grow"><div>Install automatically</div><div class="dim" style="font-size:12px">Only when the game is not running</div></div><button class="switch" id="prefAuto" onclick="call('set_auto_update', !(S && S.update && S.update.auto))" aria-label="Install updates automatically"><span></span></button></div>
+        <div class="srow"><div class="grow dim" style="font-size:13px" id="updInfo"></div><button class="btn outline small" id="checkBtn" onclick="checkNow()">Check now</button></div>
+      </div>
+
+      <div class="card" id="secAccount">
+        <span class="label">Account</span>
+        <div class="srow"><div class="grow" id="acctText">Not linked</div><button class="btn outline small hidden" id="unlinkBtn" style="color:var(--crit);border-color:rgba(248,113,113,.4)" onclick="if(confirm('Unlink this PC from 7Net?')) call('unlink')">Unlink this PC</button></div>
       </div>
     </section>
   </main>
 </div>
+
 <script>
   let S = null
   const $ = id => document.getElementById(id)
@@ -180,14 +232,55 @@
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
   const ok = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>'
   const no = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg>'
-
-  const jingle = document.getElementById('jingle')
-  let lastSoundSeq = 0   // counts only within this run, so anything above 0 is new
-  function playJingle(test) {
-    const snd = (S && S.sound) || {}
-    if (!test && snd.muted) return
-    try { jingle.pause(); jingle.currentTime = 0; jingle.volume = snd.volume ?? 0.6; jingle.play().catch(() => {}) } catch (e) {}
+  const ICON = {
+    play: '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24"><path d="M7 4h4v16H7zM13 4h4v16h-4z"/></svg>',
+    vol: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>',
+    mute: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>',
   }
+  const YES = '<span class="mi y">✓ ', NOPE = '<span class="mi n">✕ '
+  const SEES = {
+    off: [0, 0, 0, 0], online: [1, 0, 0, 0], full: [1, 1, 1, 1],
+  }
+  const SEES_LABELS = ['In game', 'Ship and seat', 'Location', 'Ship status']
+  document.querySelectorAll('.mode').forEach(b => {
+    b.insertAdjacentHTML('beforeend', SEES[b.dataset.mode].map((v, i) => (v ? YES : NOPE) + SEES_LABELS[i] + '</span>').join(''))
+  })
+
+  // ------------------------------------------------------------ music
+  const music = $('music')
+  let musicStarted = false
+  const fmt = t => isFinite(t) ? Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0') : '0:00'
+  function paintMusic() {
+    const snd = (S && S.sound) || {}
+    $('sndPlay').innerHTML = music.paused ? ICON.play : ICON.pause
+    $('sndPlay').setAttribute('aria-label', music.paused ? 'Play' : 'Pause')
+    $('sndMute').innerHTML = snd.muted ? ICON.mute : ICON.vol
+    $('sndMute').classList.toggle('on', !!snd.muted)
+    $('sndMute').setAttribute('aria-label', snd.muted ? 'Unmute' : 'Mute')
+    $('sndVol').style.opacity = snd.muted ? .45 : 1
+    $('sndTime').textContent = fmt(music.currentTime) + ' / ' + fmt(music.duration)
+  }
+  ;['play', 'pause', 'ended', 'timeupdate', 'loadedmetadata'].forEach(e => music.addEventListener(e, paintMusic))
+  function setVolume(v) { music.volume = v / 100; $('sndPct').textContent = Math.round(v) + '%' }
+  function togglePlay() { if (music.paused) music.play().catch(() => {}); else music.pause() }
+  function stopMusic() { music.pause(); music.currentTime = 0; paintMusic() }
+  function toggleMute() { call('set_sound', !(S && S.sound && S.sound.muted), null) }
+
+  // ------------------------------------------------------------ settings view
+  function toggleSettings() {
+    const open = $('settingsView').classList.contains('hidden')
+    show('settingsView', open); show('mainView', !open)
+    $('gearBtn').classList.toggle('on', open)
+  }
+  function goSec(btn) {
+    document.querySelectorAll('.settings nav button[data-sec]').forEach(b => b.classList.toggle('on', b === btn))
+    $(btn.dataset.sec).scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  function togglePref(key) { call('set_pref', key, !(S && S.prefs && S.prefs[key])) }
+  const setSwitch = (id, on) => $(id).classList.toggle('on', !!on)
+  async function checkNow() { $('checkBtn').disabled = true; $('updInfo').textContent = 'Checking…'; try { await call('check_updates') } finally { $('checkBtn').disabled = false } }
+
   function api(name, ...args) { return window.pywebview ? window.pywebview.api[name](...args) : Promise.resolve(null) }
   async function call(name, ...args) { const s = await api(name, ...args); if (s) render(s) }
   async function startLink() { $('linkErr').textContent = ''; await call('start_link') }
@@ -197,31 +290,33 @@
     if (r) { render(r.status); if (r.result.errors.length) $('cfgErr').textContent = r.result.errors.join(' · ') }
   }
   function share(patch) { call('set_share', patch) }
-  const SHARE_HELP = {
-    off: 'Org Command does not see you.',
-    online: 'Org Command (manager and up) sees only that you are in game.',
-    full: 'Org Command (manager and up) sees your ship, seat and status while you are in game.',
-  }
   function modeOf(st) { return st ? (st.share_mode || (st.share_org ? 'full' : 'online')) : 'online' }
   function setMode(m) { if (modeOf(S && S.settings) !== m) share({ share_mode: m }) }
+  function updAction() { const u = (S && S.update) || {}; if (u.state === 'error') checkNow(); else call('update_now') }
 
   function render(s) {
+    const first = S === null
     S = s
     const snd = s.sound || {}
-    $('sndMute').textContent = snd.muted ? '🔇 Muted' : '🔊 On'
-    if (document.activeElement !== $('sndVol')) $('sndVol').value = Math.round((snd.volume ?? 0.6) * 100)
-    if (snd.muted && !jingle.paused) jingle.pause()
-    if ((snd.seq ?? 0) > lastSoundSeq) playJingle(false)
-    lastSoundSeq = snd.seq ?? 0
+    music.muted = !!snd.muted
+    if (document.activeElement !== $('sndVol')) { $('sndVol').value = Math.round((snd.volume ?? 0.6) * 100); setVolume($('sndVol').value) }
+    if (first && !musicStarted) {
+      musicStarted = true
+      if (s.prefs && s.prefs.play_on_start && !snd.muted && !s.autostarted) music.play().catch(() => {})
+    }
+    paintMusic()
+
     const u = s.update || {}
-    const upText = { up_to_date: ' · up to date', checking: ' · checking for updates', downloading: ' · downloading v' + u.latest, ready: ' · v' + u.latest + ' ready', installing: ' · updating…', error: ' · update check failed' }[u.state] || ''
+    const upText = { up_to_date: ' · up to date', checking: ' · checking for updates', downloading: ' · downloading v' + u.latest, ready: ' · v' + u.latest + ' ready', installing: ' · updating…', error: ' · update check failed', source: ' · source build' }[u.state] || ''
     $('ver').textContent = 'v' + s.version + upText
-    show('updCard', u.state === 'ready' || u.state === 'installing' || (u.state === 'error' && !!u.latest))
-    $('updTitle').textContent = u.state === 'installing' ? 'Updating…' : '7Hills Link v' + u.latest + ' is ready'
-    $('updText').textContent = u.state === 'installing' ? 'The window closes and the new version opens in a moment.' : 'Restart to use it. Takes a few seconds; you stay linked.'
+    const failed = u.state === 'error' && !!u.latest
+    show('updCard', u.state === 'ready' || u.state === 'installing' || failed)
+    $('updCard').style.borderColor = failed ? 'rgba(248,113,113,.5)' : ''
+    $('updTitle').textContent = failed ? 'Update failed' : u.state === 'installing' ? 'Updating…' : 'v' + u.latest + ' ready'
+    $('updText').textContent = failed ? 'Kept v' + s.version + '. ' + (u.error || '') + ' Details in update.log.' : u.state === 'installing' ? 'The window closes and the new version opens in a moment.' : 'Installs when you quit the game, or now. You stay linked.'
+    $('updBtn').textContent = failed ? 'Try again' : 'Restart now'
     $('updBtn').disabled = u.state === 'installing'
-    $('updAuto').checked = !!u.auto
-    $('updErr').textContent = u.state === 'error' ? u.error : ''
+
     const name = s.member ? s.member.handle : null
     $('handle').textContent = name || (s.linked ? 'Linked' : 'Not linked')
     $('ini').textContent = name ? name.slice(0, 2).toUpperCase() : '?'
@@ -248,18 +343,25 @@
     show('restartCard', s.needs_restart && !s.game_connected)
 
     const mode = modeOf(s.settings)
-    document.querySelectorAll('#shareSeg button').forEach(b => {
-      const on = b.dataset.mode === mode
+    document.querySelectorAll('.mode').forEach(b => {
+      const on = s.linked && b.dataset.mode === mode
       b.classList.toggle('on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); b.disabled = !s.linked
     })
-    $('shareHelp').textContent = s.linked ? SHARE_HELP[mode] : 'Link this PC first.'
-    show('shareOpts', mode === 'full')
+    $('extras').classList.toggle('off', !s.linked || mode !== 'full')
+    show('shareLinkHint', !s.linked)
     $('optVitals').checked = !!(s.settings && s.settings.share_vitals)
     $('optUec').checked = !!(s.settings && s.settings.share_uec)
 
+    const p = s.prefs || {}
+    setSwitch('prefStart', p.start_with_windows); setSwitch('prefTray', p.tray); setSwitch('prefMusic', p.play_on_start)
+    $('prefStart').disabled = !s.can_autostart
+    $('startHint').textContent = s.can_autostart ? 'Opens minimized in the tray, no music' : 'Only in the packaged 7HillsLink.exe'
+    setSwitch('prefAuto', u.auto)
+    const ago = s.update_checked_ago
+    if (!$('checkBtn').disabled) $('updInfo').textContent = 'v' + s.version + upText + (ago !== null && ago !== undefined ? ' · checked ' + (ago < 60 ? 'just now' : Math.round(ago / 60) + ' min ago') : '')
     $('channels').innerHTML = s.installs.map(i => '<button class="chip' + (i.channel === s.channel ? ' on' : '') + '" onclick="call(\'set_channel\',\'' + esc(i.channel) + '\')">' + esc(i.channel) + '</button>').join('') || '<span class="dim">none</span>'
+    $('acctText').textContent = s.linked ? 'Linked as ' + (name || 'this PC') : 'Not linked'
     show('unlinkBtn', s.linked)
-    $('footer').textContent = s.linked ? 'Opens your dashboard at 7hills.space/live' : ''
   }
 
   async function tick() { try { const s = await api('status'); if (s) render(s) } catch (e) {} }

@@ -1,4 +1,4 @@
-"""Tray icon: a gold "7". Minimizing the window hides it to the tray.
+"""Tray icon: a gold "7". Minimizing or closing the window hides it to the tray.
 
 Uses pystray (Windows notification area). If pystray or Pillow is missing,
 the client runs without a tray icon and minimizes as usual.
@@ -35,14 +35,20 @@ def icon_image(size: int = 64):
 
 
 class Tray:
-    def __init__(self, on_open: Callable[[], None], on_dashboard: Callable[[], None], on_quit: Callable[[], None]) -> None:
+    def __init__(self, on_open: Callable[[], None], on_dashboard: Callable[[], None], on_quit: Callable[[], None],
+                 on_mute: Callable[[], None] | None = None, is_muted: Callable[[], bool] | None = None) -> None:
         self.icon = None
         try:
             import pystray
 
-            menu = pystray.Menu(
+            items = [
                 pystray.MenuItem("Open 7Hills Link", lambda *_: on_open(), default=True),
                 pystray.MenuItem("Open my dashboard", lambda *_: on_dashboard()),
+            ]
+            if on_mute and is_muted:
+                items.append(pystray.MenuItem("Mute music", lambda *_: on_mute(), checked=lambda _item: is_muted()))
+            menu = pystray.Menu(
+                *items,
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Quit", lambda *_: on_quit()),
             )

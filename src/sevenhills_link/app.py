@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import os
-import sys
 import threading
 import webbrowser
 
 from . import updater
 from .core import Core
 from .paths import resource
+from .prefs import DEFAULTS, apply_startup
 
 SITE = "https://www.7hills.space"
 
@@ -27,24 +27,27 @@ LINKS = {
 class JsApi:
     """Methods the page calls through window.pywebview.api."""
 
-    def __init__(self, core: Core):
+    def __init__(self, core: Core, autostart: bool):
         self._core = core
+        self._autostart = autostart
 
     def status(self):
-        return self._core.status()
+        s = self._core.status()
+        s["autostarted"] = self._autostart
+        return s
 
     def enable_telemetry(self):
         r = self._core.enable_telemetry()
-        return {"result": r, "status": self._core.status()}
+        return {"result": r, "status": self.status()}
 
     def rescan(self):
         self._core.scan()
         self._core.ensure_stream()
-        return self._core.status()
+        return self.status()
 
     def set_channel(self, channel):
         self._core.set_channel(str(channel))
-        return self._core.status()
+        return self.status()
 
     def start_link(self):
         return self._core.start_link()
@@ -55,25 +58,31 @@ class JsApi:
 
     def unlink(self):
         self._core.unlink()
-        return self._core.status()
+        return self.status()
 
     def set_share(self, patch):
         return self._core.set_share(dict(patch or {}))
 
     def update_now(self):
         self._core.updates.install()
-        return self._core.status()
+        return self.status()
 
     def check_updates(self):
         self._core.updates.check_now()
-        return self._core.status()
+        return self.status()
 
     def set_auto_update(self, on):
         self._core.updates.set_auto(bool(on))
-        return self._core.status()
+        return self.status()
 
     def set_sound(self, muted=None, volume=None):
-        return self._core.set_sound(muted if muted is None else bool(muted), volume if volume is None else float(volume))
+        self._core.set_sound(muted if muted is None else bool(muted), volume if volume is None else float(volume))
+        return self.status()
+
+    def set_pref(self, key, value):
+        if str(key) in DEFAULTS:
+            self._core.prefs.set(str(key), bool(value))
+        return self.status()
 
     def open_link(self, key):
         url = LINKS.get(str(key))
@@ -84,34 +93,23 @@ class JsApi:
         webbrowser.open(SITE + "/live")
 
 
-def run_window(updated_from: str | None = None) -> int:
+def run_window(updated_from: str | None = None, autostart: bool = False) -> int:
     import webview  # pywebview
 
-    # The jingle plays without a click on the page; WebView2 needs this to allow it.
+    # The music plays without a click on the page; WebView2 needs this to allow it.
     os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--autoplay-policy=no-user-gesture-required")
     core = Core()
-    html = resource("ui", "index.html").read_text(encoding="utf-8")
-    try:
-        import base64
-        jingle = base64.b64encode(resource("ui", "intro.mp3").read_bytes()).decode("ascii")
-        html = html.replace("{{INTRO_SRC}}", "data:audio/mpeg;base64," + jingle)
-    except OSError:
-        html = html.replace("{{INTRO_SRC}}", "")
-    window = webview.create_window("7Hills Link", html=html, js_api=JsApi(core), width=980, height=700, min_size=(760, 560), background_color="#0D0D0D")
+    # Keep the Windows Run entry in step with the setting and the exe's current path.
+    apply_startup(core.prefs.get("start_with_windows"))
 
-    def install(new_exe):
-        # Swaps the exe and starts the new one; on success close this window and exit.
-        if updater.install(new_exe):
-            tray.stop()
-            core.stop()
-            try:
-                window.destroy()
-            finally:
-                os._exit(0)
-    core.updates.install_hook = install
+    # Served by pywebview's local http server, so the page can load music.mp3 next to it.
+    page = str(resource("ui", "index.html"))
+    window = webview.create_window("7Hills Link", url=page, js_api=JsApi(core, autostart), width=980, height=720,
+                                   min_size=(760, 560), background_color="#0D0D0D", hidden=autostart)
 
-    # Tray: minimizing hides the window; the gold 7 in the tray brings it back.
     from .tray import Tray
+
+    quitting = threading.Event()
 
     def show_window():
         try:
@@ -121,6 +119,7 @@ def run_window(updated_from: str | None = None) -> int:
             pass
 
     def quit_app():
+        quitting.set()
         tray.stop()
         core.stop()
         try:
@@ -128,28 +127,60 @@ def run_window(updated_from: str | None = None) -> int:
         except Exception:
             os._exit(0)
 
-    tray = Tray(show_window, lambda: webbrowser.open(SITE + "/live"), quit_app)
-    if tray.available:
-        window.events.minimized += lambda *_: window.hide()
+    def toggle_mute():
+        core.set_sound(muted=not core.sound_muted)
+
+    tray = Tray(show_window, lambda: webbrowser.open(SITE + "/live"), quit_app, toggle_mute, lambda: core.sound_muted)
+
+    def to_tray() -> bool:
+        return tray.available and core.prefs.get("tray") and not quitting.is_set()
+
+    def on_minimized(*_):
+        if to_tray():
+            window.hide()
+
+    def on_closing(*_):
+        # With "Minimize to tray" on, the close button hides the window; Quit is in the tray menu.
+        if to_tray():
+            window.hide()
+            return False
+        return True
+
+    window.events.minimized += on_minimized
+    window.events.closing += on_closing
+
+    def install(new_exe):
+        # Hands the swap to a script and exits; the script starts the new version.
+        if updater.install(new_exe):
+            quitting.set()
+            tray.stop()
+            core.stop()
+            try:
+                window.destroy()
+            finally:
+                os._exit(0)
+    core.updates.install_hook = install
 
     def tray_title_loop():
-        while True:
+        while not quitting.is_set():
             try:
                 st = core.status()
-                state = "in game" if st.get("game_connected") else "game not running"
-                tray.set_title(f"7Hills Link v{st.get('version')} · {state}")
+                state = "game connected" if st.get("game_connected") else "game not running"
+                tray.set_title(f"7Hills Link {st.get('version')} · {state}")
             except Exception:
                 pass
-            threading.Event().wait(5)
+            quitting.wait(5)
 
     def started():
         threading.Thread(target=core.run, name="core", daemon=True).start()
         tray.start()
+        if autostart and not tray.available:
+            show_window()   # no tray to come back from: show the window after all
         threading.Thread(target=tray_title_loop, name="tray-title", daemon=True).start()
         if updated_from:
             threading.Thread(target=updater.cleanup, name="update-cleanup", daemon=True).start()
 
-    webview.start(started)
+    webview.start(started, http_server=True)
     tray.stop()
     core.stop()
     return 0
