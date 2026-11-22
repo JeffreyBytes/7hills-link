@@ -32,6 +32,7 @@ The client runs natively on Linux from source (see *Run from source*; use `expor
   Either takes the Wine prefix, the `StarCitizen` folder, a channel folder (`.../StarCitizen/PTU`) or `StarCitizen.exe` itself. `--game-dir` can be repeated; separate several folders in the variable with `:`.
 - **`user.cfg`:** *Switch on* writes the three lines as on Windows. No admin prompt is needed, the prefix is yours.
 - **`GRPC_CLIENT_SERVER_ENABLED`:** must be in the game's launch environment; the client cannot set it for you. Add `export GRPC_CLIENT_SERVER_ENABLED=true` to your launch script, or set it under Lutris → Configure → System options → Environment variables, or use Steam launch options `GRPC_CLIENT_SERVER_ENABLED=true %command%`. The client checks the running game's environment and shows a hint until it sees the variable there.
+- **One copy, tray and autostart:** as on Windows it runs one copy at a time (a lock file; a second start shows the running window). *Start when you log in* writes `~/.config/autostart/7hills-link.desktop`. The tray icon needs an AppIndicator/StatusNotifier host (most desktops; GNOME needs the AppIndicator extension); without one, minimizing does not hide the window. Updates are not installed automatically when running from source; `git pull` instead.
 - Not verified yet: whether the telemetry server starts under Wine/Proton at all. Check with `ss -ltnp | grep 50051` while in game, and report in [issue #1](https://github.com/TheBanjolorian/7hills-link/issues/1).
 
 ## What the game's telemetry offers

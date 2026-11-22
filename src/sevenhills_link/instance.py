@@ -2,7 +2,8 @@
 
 The first instance holds a named Windows mutex and waits on a named event.
 A second start (double-click, Start menu, autostart) sets the event so the
-first one shows its window, and then exits. Outside Windows this is a no-op.
+first one shows its window, and then exits. On Linux the same is done with
+an flock'd lock file and a "show" request file that the running one polls.
 """
 
 from __future__ import annotations
@@ -38,11 +39,36 @@ def _k32():
     return ctypes, k
 
 
+def _posix_acquire(wait: float) -> bool:
+    import fcntl
+    from .paths import data_dir
+    deadline = time.time() + wait
+    f = open(data_dir() / "instance.lock", "a+")
+    while True:
+        try:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            _handles.append(f)
+            return True
+        except OSError:
+            if time.time() >= deadline:
+                f.close()
+                return False
+            time.sleep(0.25)
+
+
+def _show_request():
+    from .paths import data_dir
+    return data_dir() / "show.request"
+
+
 def acquire(wait: float = 0.0) -> bool:
     """True if this process is the only 7Hills Link. With wait, keep trying that
     long (used right after an install or update, while the old one closes)."""
     if sys.platform != "win32":
-        return True
+        try:
+            return _posix_acquire(wait)
+        except (ImportError, OSError):
+            return True   # no flock here: do not block the start
     ctypes, k = _k32()
     deadline = time.time() + wait
     while True:
@@ -60,7 +86,11 @@ def acquire(wait: float = 0.0) -> bool:
 def signal_running() -> bool:
     """Ask the running instance to show its window."""
     if sys.platform != "win32":
-        return False
+        try:
+            _show_request().write_text("show", encoding="utf-8")
+            return True
+        except OSError:
+            return False
     _, k = _k32()
     h = k.OpenEventW(EVENT_MODIFY_STATE | SYNCHRONIZE, False, EVENT)
     if not h:
@@ -73,6 +103,26 @@ def signal_running() -> bool:
 def listen(on_show: Callable[[], None]) -> None:
     """In the running instance: call on_show each time another start asks for the window."""
     if sys.platform != "win32":
+        req = _show_request()
+
+        def poll():
+            while True:
+                time.sleep(0.5)
+                try:
+                    req.unlink()
+                except FileNotFoundError:
+                    continue
+                except OSError:
+                    continue
+                try:
+                    on_show()
+                except Exception:
+                    pass
+        try:
+            req.unlink()   # a stale request from before this start
+        except OSError:
+            pass
+        threading.Thread(target=poll, name="instance-show", daemon=True).start()
         return
     _, k = _k32()
     h = k.CreateEventW(None, False, False, EVENT)   # auto-reset

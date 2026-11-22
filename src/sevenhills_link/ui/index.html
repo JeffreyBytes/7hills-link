@@ -202,7 +202,7 @@
 
     <div class="sec" id="secGeneral">
       <div class="label" style="margin-bottom:6px">General</div>
-      <div class="srow"><div class="grow"><div>Start with Windows</div><div class="dim" style="font-size:12px" id="startHint">Opens minimized in the tray, no music</div></div><button class="switch" id="prefStart" onclick="togglePref('start_with_windows')" aria-label="Start with Windows"><span></span></button></div>
+      <div class="srow"><div class="grow"><div id="startLabel">Start with Windows</div><div class="dim" style="font-size:12px" id="startHint">Opens minimized in the tray, no music</div></div><button class="switch" id="prefStart" onclick="togglePref('start_with_windows')" aria-label="Start with Windows"><span></span></button></div>
       <div class="srow"><div class="grow"><div>Minimize to tray</div><div class="dim" style="font-size:12px">Keeps running when the window is minimized or closed. Quit from the gold 7 in the tray.</div></div><button class="switch" id="prefTray" onclick="togglePref('tray')" aria-label="Minimize to tray"><span></span></button></div>
       <div class="srow"><div class="grow"><div>Play music on start</div><div class="dim" style="font-size:12px">Mute and volume are on the main view</div></div><button class="switch" id="prefMusic" onclick="togglePref('play_on_start')" aria-label="Play music on start"><span></span></button></div>
     </div>
@@ -407,7 +407,9 @@
     const pr = s.prefs || {}
     setSwitch('prefStart', pr.start_with_windows); setSwitch('prefTray', pr.tray); setSwitch('prefMusic', pr.play_on_start)
     $('prefStart').disabled = !s.can_autostart
-    $('startHint').textContent = s.can_autostart ? 'Opens minimized in the tray, no music' : 'Only in the packaged 7HillsLink.exe'
+    const linux = String(s.platform || '').startsWith('linux')
+    $('startLabel').textContent = linux ? 'Start when you log in' : 'Start with Windows'
+    $('startHint').textContent = s.can_autostart ? (linux ? 'Adds 7hills-link.desktop to ~/.config/autostart; starts hidden in the tray, no music' : 'Opens minimized in the tray, no music') : 'Only in the packaged 7HillsLink.exe'
     setSwitch('prefAuto', u.auto)
     const ago = s.update_checked_ago
     const upInfo = { up_to_date: ' · up to date', source: ' · source build' }[u.state] || upText
