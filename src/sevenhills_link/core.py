@@ -19,6 +19,7 @@ TICK = 0.05             # how often the loop looks for news
 HEARTBEAT = 15.0        # upload at least this often while connected, even if nothing new
 SETTINGS_EVERY = 30.0   # refresh sharing settings from 7Net
 UPDATE_EVERY = 6 * 3600 # look for a new release
+JINGLE_GAP = 600.0      # play the jingle on a new game connection at most every 10 minutes
 
 
 def _summary(frame: dict | None) -> dict:
@@ -121,6 +122,18 @@ class Core:
         self.linked = bool(self.token)
         self.link: dict | None = None
         self.updates = Updates(self)
+        # Sound: the 7Hills jingle when the game connects and when the PC gets linked.
+        self.sound_path = data_dir() / "sound.json"
+        try:
+            snd = json.loads(self.sound_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            snd = {}
+        self.sound_muted = bool(snd.get("muted", False))
+        v = snd.get("volume", 0.6)
+        self.sound_volume = min(1.0, max(0.0, float(v))) if isinstance(v, (int, float)) else 0.6
+        self.sound_seq = 0              # the window plays the jingle when this goes up
+        self.sound_reason: str | None = None
+        self._last_jingle = 0.0
         self.link_error: str | None = None
         self.member: dict | None = None
         self.settings: dict | None = None
@@ -226,6 +239,7 @@ class Core:
                     api.save_token(r["token"])
                     with self.lock:
                         self.token, self.linked, self.link = r["token"], True, None
+                    self.play_jingle("linked", force=True)
                     self.refresh_settings(force=True)
                     return
             except api.ApiError as e:
@@ -281,6 +295,7 @@ class Core:
         last_sent_json = ""
         last_try = 0.0
         backoff_until = 0.0
+        was_connected = False
         last_scan = time.time()
         while not self._stop.is_set():
             self._stop.wait(TICK)
@@ -291,6 +306,10 @@ class Core:
                 last_scan = time.time()
             self.refresh_settings()
             self.updates.tick()
+            connected = bool(self.stream and self.stream.connected)
+            if connected and not was_connected:
+                self.play_jingle("game")
+            was_connected = connected
             if not (self.token and self.stream) or now < backoff_until or now - last_try < MIN_GAP:
                 continue
             new_frame, has_events = self.stream.pending(last_sent_frame_at)
@@ -316,6 +335,27 @@ class Core:
                 elif e.status == 429:
                     backoff_until = time.time() + 2.0
 
+    # ---------------------------------------------------------------- sound
+
+    def play_jingle(self, reason: str, force: bool = False) -> None:
+        now = time.time()
+        if not force and now - self._last_jingle < JINGLE_GAP:
+            return
+        self._last_jingle = now
+        self.sound_reason = reason
+        self.sound_seq += 1
+
+    def set_sound(self, muted: bool | None = None, volume: float | None = None) -> dict:
+        if muted is not None:
+            self.sound_muted = bool(muted)
+        if isinstance(volume, (int, float)):
+            self.sound_volume = min(1.0, max(0.0, float(volume)))
+        try:
+            self.sound_path.write_text(json.dumps({"muted": self.sound_muted, "volume": round(self.sound_volume, 2)}), encoding="utf-8")
+        except OSError:
+            pass
+        return self.status()
+
     def stop(self) -> None:
         self._stop.set()
         if self.stream:
@@ -334,6 +374,7 @@ class Core:
             return {
                 "version": __version__,
                 "update": self.updates.status(),
+                "sound": {"muted": self.sound_muted, "volume": self.sound_volume, "seq": self.sound_seq, "reason": self.sound_reason},
                 "installs": [i.as_dict() for i in self.installs],
                 "channel": self.channel,
                 "game_found": inst is not None,
