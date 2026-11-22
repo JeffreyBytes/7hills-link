@@ -56,10 +56,27 @@ class Tray:
     def available(self) -> bool:
         return self.icon is not None
 
+    @property
+    def backend(self) -> str:
+        return type(self.icon).__module__.rsplit(".", 1)[-1] if self.icon else ""
+
+    @property
+    def can_hide(self) -> bool:
+        """Safe to hide the window to the tray. Not on Linux's X11 (XEmbed) backend: under a
+        StatusNotifier proxy (KDE Wayland) its clicks never arrive and it has no menu, so a
+        hidden window could not be brought back. With PyGObject pystray uses AppIndicator."""
+        return self.icon is not None and self.backend != "_xorg"
+
     def start(self) -> None:
         if self.icon:
             try:
-                self.icon.run_detached()
+                if self.backend == "_xorg":
+                    # pystray 0.19.5 on X11: run_detached() starts a second setup thread that is
+                    # never released, so stop() waits 5 s. Running run() in one thread avoids it.
+                    import threading
+                    threading.Thread(target=self.icon.run, name="tray", daemon=True).start()
+                else:
+                    self.icon.run_detached()
             except Exception:
                 self.icon = None
 

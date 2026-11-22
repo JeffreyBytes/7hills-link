@@ -132,3 +132,28 @@ def test_stream_and_upload(tmp_path: Path, monkeypatch):
     c.stop()
     game.stop(0)
     web.shutdown()
+
+
+def _free_port() -> int:
+    import socket
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def test_stream_falls_back_to_the_port_that_answers():
+    """The game may ignore the user.cfg port (4.x LIVE serves on 2942): try the next one and stay there."""
+    fds = _fds()
+    game, gport = _game_server(fds)
+    dead = _free_port()
+    s = GameStream(fds, [dead, gport])
+    s.start()
+    try:
+        for _ in range(100):
+            if s.connected:
+                break
+            time.sleep(0.1)
+        assert s.connected and s.port == gport and s.error is None
+    finally:
+        s.stop()
+        game.stop(0)

@@ -34,6 +34,8 @@ Also set the environment variable `GRPC_CLIENT_SERVER_ENABLED=true` for your Win
 
 Then quit the RSI Launcher fully (tray icon → Quit) and start the game again. Both the `user.cfg` lines and the environment variable are read at start.
 
+**Port:** on 4.x LIVE the game ignores `grpc.client.server.port` and always listens on **2942**; there the environment variable alone is enough to start the server (seen under Wine, [issue #1](https://github.com/TheBanjolorian/7hills-link/issues/1)). Use 2942 in the commands below if 50051 does not answer. Server reflection is off, so tools like grpcurl need the protoset from the exe.
+
 - The server listens on `127.0.0.1` only, so nothing is exposed to your network.
 - The stream starts sending once you are loaded into the game.
 - If the server does not answer, a setting is missing or the game was not restarted.

@@ -17,6 +17,8 @@ import sys
 from pathlib import Path
 
 DEFAULT_PORT = 50051
+LIVE_PORT = 2942        # 4.x LIVE ignores grpc.client.server.port and always listens here
+PORT_ENV = "SEVENHILLS_SC_PORT"   # force one port (also set by --port)
 WANTED = {
     "grpc.client.server.enabled": "1",
     "grpc.client.server.port": str(DEFAULT_PORT),
@@ -57,6 +59,17 @@ def port_of(path: Path) -> int:
         return p if 1 <= p <= 65535 else DEFAULT_PORT
     except ValueError:
         return DEFAULT_PORT
+
+
+def ports_for(path: Path) -> list[int]:
+    """Ports to try, in order: a forced port alone, else the user.cfg port and then 2942."""
+    forced = os.environ.get(PORT_ENV, "").strip()
+    if forced.isdigit() and 1 <= int(forced) <= 65535:
+        return [int(forced)]
+    out = [port_of(path)]
+    if LIVE_PORT not in out:
+        out.append(LIVE_PORT)
+    return out
 
 
 def missing(path: Path) -> dict[str, str]:

@@ -95,3 +95,39 @@ def test_env_check_reads_the_running_game(monkeypatch):
     assert gamecfg.env_enabled() is False
     assert gamecfg.env_manual() is True
     assert gamecfg.enable_env() is False
+
+
+def test_ports_for(tmp_path: Path, monkeypatch):
+    cfg = tmp_path / "user.cfg"
+    monkeypatch.delenv(gamecfg.PORT_ENV, raising=False)
+    assert gamecfg.ports_for(cfg) == [gamecfg.DEFAULT_PORT, gamecfg.LIVE_PORT]
+    cfg.write_text("grpc.client.server.port = 2942\n")
+    assert gamecfg.ports_for(cfg) == [2942]
+    monkeypatch.setenv(gamecfg.PORT_ENV, "50123")
+    assert gamecfg.ports_for(cfg) == [50123]
+
+
+def test_take_port():
+    from sevenhills_link.__main__ import _take_port
+    argv = ["--headless", "--port", "2942"]
+    assert _take_port(argv) == "2942" and argv == ["--headless"]
+    argv = ["--port=1"]
+    assert _take_port(argv) == "1" and argv == []
+
+
+def test_tray_does_not_hide_on_xembed():
+    from sevenhills_link.tray import Tray
+
+    class _xorg_icon: pass
+    _xorg_icon.__module__ = "pystray._xorg"
+
+    class _appindicator_icon: pass
+    _appindicator_icon.__module__ = "pystray._appindicator"
+
+    t = Tray.__new__(Tray)
+    t.icon = _xorg_icon()
+    assert t.available and not t.can_hide
+    t.icon = _appindicator_icon()
+    assert t.can_hide
+    t.icon = None
+    assert not t.can_hide

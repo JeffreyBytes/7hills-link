@@ -5,6 +5,8 @@
   --game-dir <path>    a Star Citizen folder to look in (repeatable): the StarCitizen folder,
                        a channel folder, StarCitizen.exe or a whole Wine prefix. Same as
                        SEVENHILLS_SC_DIR (separate several with the OS path separator).
+  --port <n>           use only this telemetry port (default: the user.cfg port, then 2942).
+                       Same as SEVENHILLS_SC_PORT.
   --updated <version>  (used by the updater) started by the previous version after an update
   --autostart          (used by the Windows Run entry) start hidden in the tray, no music
   --install-to <exe> --wait <pids> --from-version <v>   (used by the updater) put this exe in place of <exe>
@@ -36,6 +38,19 @@ def _take_game_dirs(argv: list[str]) -> list[str]:
     return dirs
 
 
+def _take_port(argv: list[str]) -> str | None:
+    """Remove --port <n> / --port=<n> from argv and return n."""
+    for i, a in enumerate(argv):
+        if a == "--port" and i + 1 < len(argv):
+            v = argv[i + 1]
+            del argv[i:i + 2]
+            return v
+        if a.startswith("--port="):
+            del argv[i]
+            return a.split("=", 1)[1]
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     from . import __version__
@@ -46,6 +61,12 @@ def main(argv: list[str] | None = None) -> int:
         from .detect import ENV_DIR
         old = [p for p in os.environ.get(ENV_DIR, "").split(os.pathsep) if p]
         os.environ[ENV_DIR] = os.pathsep.join(game_dirs + old)
+
+    port = _take_port(argv)
+    if port:
+        import os
+        from .gamecfg import PORT_ENV
+        os.environ[PORT_ENV] = port
 
     if "--version" in argv:
         print(__version__)

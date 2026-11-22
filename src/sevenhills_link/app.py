@@ -190,7 +190,7 @@ def run_window(updated_from: str | None = None, autostart: bool = False) -> int:
     instance.listen(show_window)   # a second start shows this window instead of running twice
 
     def to_tray() -> bool:
-        return tray.available and core.prefs.get("tray") and not quitting.is_set()
+        return tray.can_hide and core.prefs.get("tray") and not quitting.is_set()
 
     def on_minimized(*_):
         if to_tray():
@@ -231,7 +231,7 @@ def run_window(updated_from: str | None = None, autostart: bool = False) -> int:
     def started():
         threading.Thread(target=core.run, name="core", daemon=True).start()
         tray.start()
-        if autostart and not tray.available:
+        if autostart and not tray.can_hide:
             show_window()   # no tray to come back from: show the window after all
         threading.Thread(target=tray_title_loop, name="tray-title", daemon=True).start()
         if updated_from:
