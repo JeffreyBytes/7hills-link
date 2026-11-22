@@ -97,3 +97,17 @@ def test_uploads_on_change_at_most_4_per_second(tmp_path, monkeypatch):
     assert len(sent) <= len(changing) + 1                         # unchanged frame is not resent
     gaps = [b[0] - a[0] for a, b in zip(sent, sent[1:])]
     assert min(gaps) >= 0.24
+
+
+def test_jingle_and_sound_settings(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    from sevenhills_link import core as core_mod
+    c = core_mod.Core()
+    assert c.status()["sound"]["seq"] == 0
+    c.play_jingle("game"); c.play_jingle("game")          # second one within 10 min is skipped
+    assert c.status()["sound"]["seq"] == 1
+    c.play_jingle("linked", force=True)
+    assert c.status()["sound"] == {"muted": False, "volume": 0.6, "seq": 2, "reason": "linked"}
+    c.set_sound(muted=True, volume=1.7)
+    c2 = core_mod.Core()
+    assert c2.sound_muted and c2.sound_volume == 1.0

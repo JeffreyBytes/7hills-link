@@ -138,6 +138,14 @@
       </div>
 
       <div class="card row">
+        <div class="grow"><div style="font-weight:600">Sound</div><div class="dim" style="font-size:12px">The 7Hills jingle when the game connects and when you link this PC</div></div>
+        <button class="link" id="sndMute" onclick="call('set_sound', !(S && S.sound && S.sound.muted), null)"></button>
+        <input type="range" id="sndVol" min="0" max="100" step="1" style="width:130px;accent-color:var(--gold)" oninput="jingle.volume=this.value/100" onchange="call('set_sound', null, this.value/100)">
+        <button class="btn outline small" onclick="playJingle(true)">Play</button>
+      </div>
+      <audio id="jingle" src="{{INTRO_SRC}}" preload="auto"></audio>
+
+      <div class="card row">
         <div class="grow"><div style="font-weight:600">Game channel</div><div class="dim" style="font-size:12px" id="chHint">Which install to read from</div></div>
         <div class="chips" id="channels"></div>
       </div>
@@ -157,6 +165,13 @@
   const ok = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>'
   const no = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg>'
 
+  const jingle = document.getElementById('jingle')
+  let lastSoundSeq = 0   // counts only within this run, so anything above 0 is new
+  function playJingle(test) {
+    const snd = (S && S.sound) || {}
+    if (!test && snd.muted) return
+    try { jingle.pause(); jingle.currentTime = 0; jingle.volume = snd.volume ?? 0.6; jingle.play().catch(() => {}) } catch (e) {}
+  }
   function api(name, ...args) { return window.pywebview ? window.pywebview.api[name](...args) : Promise.resolve(null) }
   async function call(name, ...args) { const s = await api(name, ...args); if (s) render(s) }
   async function startLink() { $('linkErr').textContent = ''; await call('start_link') }
@@ -176,6 +191,12 @@
 
   function render(s) {
     S = s
+    const snd = s.sound || {}
+    $('sndMute').textContent = snd.muted ? '🔇 Muted' : '🔊 On'
+    if (document.activeElement !== $('sndVol')) $('sndVol').value = Math.round((snd.volume ?? 0.6) * 100)
+    if (snd.muted && !jingle.paused) jingle.pause()
+    if ((snd.seq ?? 0) > lastSoundSeq) playJingle(false)
+    lastSoundSeq = snd.seq ?? 0
     const u = s.update || {}
     const upText = { up_to_date: ' · up to date', checking: ' · checking for updates', downloading: ' · downloading v' + u.latest, ready: ' · v' + u.latest + ' ready', installing: ' · updating…' }[u.state] || ''
     $('ver').textContent = 'v' + s.version + upText

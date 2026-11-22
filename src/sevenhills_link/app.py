@@ -62,6 +62,9 @@ class JsApi:
         self._core.updates.set_auto(bool(on))
         return self._core.status()
 
+    def set_sound(self, muted=None, volume=None):
+        return self._core.set_sound(muted if muted is None else bool(muted), volume if volume is None else float(volume))
+
     def open_dashboard(self):
         webbrowser.open(SITE + "/live")
 
@@ -69,8 +72,16 @@ class JsApi:
 def run_window(updated_from: str | None = None) -> int:
     import webview  # pywebview
 
+    # The jingle plays without a click on the page; WebView2 needs this to allow it.
+    os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--autoplay-policy=no-user-gesture-required")
     core = Core()
     html = resource("ui", "index.html").read_text(encoding="utf-8")
+    try:
+        import base64
+        jingle = base64.b64encode(resource("ui", "intro.mp3").read_bytes()).decode("ascii")
+        html = html.replace("{{INTRO_SRC}}", "data:audio/mpeg;base64," + jingle)
+    except OSError:
+        html = html.replace("{{INTRO_SRC}}", "")
     window = webview.create_window("7Hills Link", html=html, js_api=JsApi(core), width=980, height=700, min_size=(760, 560), background_color="#0D0D0D")
 
     def install(new_exe):
