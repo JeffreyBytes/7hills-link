@@ -48,6 +48,12 @@ jobs:
         run: |
           $v = & .\dist\7HillsLink.exe --version | Out-String
           Write-Host "version: $v"
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $h = (Get-FileHash dist/7HillsLink.exe -Algorithm SHA256).Hash.ToLower()
+          "$h  7HillsLink.exe" | Out-File -Encoding ascii -NoNewline dist/7HillsLink.exe.sha256
+          Write-Host "sha256: $h"
       - uses: actions/upload-artifact@v4
         with:
           name: 7HillsLink
@@ -69,6 +75,8 @@ jobs:
           body: |
             Windows SmartScreen asks once because the exe is not signed yet: More info → Run anyway.
             Download: https://github.com/TheBanjolorian/7hills-link/releases/latest/download/7HillsLink.exe
-          files: dist/7HillsLink.exe
+          files: |
+            dist/7HillsLink.exe
+            dist/7HillsLink.exe.sha256
           overwrite_files: true
           make_latest: true

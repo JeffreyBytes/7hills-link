@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import os
+import sys
 import threading
 import webbrowser
 
+from . import updater
 from .core import Core
 from .paths import resource
 
@@ -47,17 +50,45 @@ class JsApi:
     def set_share(self, patch):
         return self._core.set_share(dict(patch or {}))
 
+    def update_now(self):
+        self._core.updates.install()
+        return self._core.status()
+
+    def check_updates(self):
+        self._core.updates.check_now()
+        return self._core.status()
+
+    def set_auto_update(self, on):
+        self._core.updates.set_auto(bool(on))
+        return self._core.status()
+
     def open_dashboard(self):
         webbrowser.open(SITE + "/live")
 
 
-def run_window() -> int:
+def run_window(updated_from: str | None = None) -> int:
     import webview  # pywebview
 
     core = Core()
-    threading.Thread(target=core.run, name="core", daemon=True).start()
     html = resource("ui", "index.html").read_text(encoding="utf-8")
-    webview.create_window("7Hills Link", html=html, js_api=JsApi(core), width=980, height=700, min_size=(760, 560), background_color="#0D0D0D")
-    webview.start()
+    window = webview.create_window("7Hills Link", html=html, js_api=JsApi(core), width=980, height=700, min_size=(760, 560), background_color="#0D0D0D")
+
+    def install(new_exe):
+        # Swaps the exe and starts the new one; on success close this window and exit.
+        if updater.install(new_exe):
+            core.stop()
+            try:
+                window.destroy()
+            finally:
+                os._exit(0)
+    core.updates.install_hook = install
+
+    def started():
+        threading.Thread(target=core.run, name="core", daemon=True).start()
+        if updated_from:
+            updater.mark_ready()   # tells the previous version the update worked
+            threading.Thread(target=updater.cleanup, name="update-cleanup", daemon=True).start()
+
+    webview.start(started)
     core.stop()
     return 0

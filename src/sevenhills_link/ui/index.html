@@ -77,6 +77,16 @@
     </aside>
 
     <section>
+      <div class="card gold hidden" id="updCard">
+        <div class="row">
+          <div class="grow"><div style="font-weight:600;font-size:15px" id="updTitle">Update ready</div>
+            <div class="muted" style="font-size:13px" id="updText"></div></div>
+          <button class="btn small" id="updBtn" onclick="call('update_now')">Restart now</button>
+        </div>
+        <label style="display:flex;gap:10px;align-items:center;font-size:13px;cursor:pointer;margin-top:10px"><input type="checkbox" id="updAuto" style="accent-color:var(--gold)" onchange="call('set_auto_update', this.checked)"> Install updates automatically when the game is not running</label>
+        <p class="err" id="updErr" style="margin:6px 0 0"></p>
+      </div>
+
       <div class="card gold hidden" id="linkCard">
         <h2 style="font-size:22px">Link this PC to 7Net</h2>
         <p class="muted" style="margin:6px 0 14px">Your browser opens 7hills.space. Sign in there and press <b>Connect this PC</b>.</p>
@@ -166,7 +176,15 @@
 
   function render(s) {
     S = s
-    $('ver').textContent = 'v' + s.version
+    const u = s.update || {}
+    const upText = { up_to_date: ' · up to date', checking: ' · checking for updates', downloading: ' · downloading v' + u.latest, ready: ' · v' + u.latest + ' ready', installing: ' · updating…' }[u.state] || ''
+    $('ver').textContent = 'v' + s.version + upText
+    show('updCard', u.state === 'ready' || u.state === 'installing' || (u.state === 'error' && !!u.latest))
+    $('updTitle').textContent = u.state === 'installing' ? 'Updating…' : '7Hills Link v' + u.latest + ' is ready'
+    $('updText').textContent = u.state === 'installing' ? 'The window closes and the new version opens in a moment.' : 'Restart to use it. Takes a few seconds; you stay linked.'
+    $('updBtn').disabled = u.state === 'installing'
+    $('updAuto').checked = !!u.auto
+    $('updErr').textContent = u.state === 'error' ? u.error : ''
     const name = s.member ? s.member.handle : null
     $('handle').textContent = name || (s.linked ? 'Linked' : 'Not linked')
     $('ini').textContent = name ? name.slice(0, 2).toUpperCase() : '?'

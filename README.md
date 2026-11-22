@@ -21,6 +21,10 @@ Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star 
 
 See **[docs/TELEMETRY.md](docs/TELEMETRY.md)** for everything we have found: how to switch it on, every field you can read, the actions you can send to the game, and how the API definitions are read from the exe. Useful if you want to build your own tool (button boxes, Joystick Gremlin, dashboards).
 
+## Updates
+
+From v0.4.0 the client checks this repository's latest release at start and every 6 hours, downloads a newer `7HillsLink.exe` and checks its SHA-256 against the release. It installs by itself when the game is not running (you can switch that off and press *Restart now* instead): the running exe is renamed to `7HillsLink.old.exe`, the new one takes its place and starts, and the old one is put back if the new one does not start within 20 seconds. Keep the exe in a folder you can write to, such as Downloads or Desktop.
+
 ## What it does not do
 
 - It does not read game memory, inject anything, or touch Easy Anti-Cheat. It only uses the telemetry server the game itself provides.
