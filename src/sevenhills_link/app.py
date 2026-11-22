@@ -88,9 +88,9 @@ class JsApi:
         self._core.updates.set_auto(bool(on))
         return self.status()
 
-    def set_sound(self, muted=None, volume=None, repeat=None):
+    def set_sound(self, muted=None, volume=None, repeat=None, stopped=None):
         self._core.set_sound(None if muted is None else bool(muted), None if volume is None else float(volume),
-                             None if repeat is None else bool(repeat))
+                             None if repeat is None else bool(repeat), None if stopped is None else bool(stopped))
         return self.status()
 
     def browse_game(self, channel):

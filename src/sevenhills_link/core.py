@@ -150,6 +150,7 @@ class Core:
         v = snd.get("volume", 0.1)
         self.sound_volume = min(1.0, max(0.0, float(v))) if isinstance(v, (int, float)) else 0.1
         self.sound_repeat = bool(snd.get("repeat", False))
+        self.sound_stopped = bool(snd.get("stopped", False))   # Stop pressed: no music on start until Play
         self.link_error: str | None = None
         self.member: dict | None = None
         self.settings: dict | None = None
@@ -381,7 +382,10 @@ class Core:
 
     # ---------------------------------------------------------------- sound
 
-    def set_sound(self, muted: bool | None = None, volume: float | None = None, repeat: bool | None = None) -> dict:
+    def set_sound(self, muted: bool | None = None, volume: float | None = None, repeat: bool | None = None,
+                  stopped: bool | None = None) -> dict:
+        if stopped is not None:
+            self.sound_stopped = bool(stopped)
         if muted is not None:
             self.sound_muted = bool(muted)
         if repeat is not None:
@@ -389,7 +393,7 @@ class Core:
         if isinstance(volume, (int, float)):
             self.sound_volume = min(1.0, max(0.0, float(volume)))
         try:
-            self.sound_path.write_text(json.dumps({"muted": self.sound_muted, "volume": round(self.sound_volume, 2), "repeat": self.sound_repeat}), encoding="utf-8")
+            self.sound_path.write_text(json.dumps({"muted": self.sound_muted, "volume": round(self.sound_volume, 2), "repeat": self.sound_repeat, "stopped": self.sound_stopped}), encoding="utf-8")
         except OSError:
             pass
         return self.status()
@@ -422,7 +426,7 @@ class Core:
             return {
                 "version": __version__,
                 "update": self.updates.status(),
-                "sound": {"muted": self.sound_muted, "volume": self.sound_volume, "repeat": self.sound_repeat},
+                "sound": {"muted": self.sound_muted, "volume": self.sound_volume, "repeat": self.sound_repeat, "stopped": self.sound_stopped},
                 "channels_known": detect.CHANNELS,
                 "prefs": self.prefs.as_dict(),
                 "traffic": self.traffic_rate(),
