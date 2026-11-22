@@ -16,6 +16,10 @@ UA = f"7HillsLink/{__version__} ({platform.system()} {platform.release()})"
 KEYRING_SERVICE = "7HillsLink"
 
 
+# Bytes sent to and received from 7Net, for the traffic readout in the window.
+traffic = {"out": 0, "in": 0}
+
+
 class ApiError(Exception):
     def __init__(self, status: int, message: str):
         super().__init__(f"{status}: {message}")
@@ -31,9 +35,12 @@ def _call(method: str, path: str, body: dict | None = None, token: str | None = 
         req.add_header("Content-Type", "application/json")
     if token:
         req.add_header("Authorization", "Bearer " + token)
+    traffic["out"] += len(data or b"") + 300   # body plus roughly the request headers
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read() or b"{}")
+            raw = r.read() or b"{}"
+            traffic["in"] += len(raw) + 200
+            return json.loads(raw)
     except urllib.error.HTTPError as e:
         try:
             msg = json.loads(e.read() or b"{}").get("error", e.reason)

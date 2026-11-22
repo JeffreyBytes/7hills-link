@@ -6,235 +6,205 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-  :root { --gold:#F0B443; --gold2:#F5C35A; --bg:#0D0D0D; --bg2:#111111; --card:#141414; --line:#222222; --text:#E8E8E8; --mute:#A3A3A3; --dim:#8A8A8A; --ok:#4ADE80; --warn:#FB923C; --crit:#F87171; }
+  :root { --gold:#F0B443; --gold2:#F5C35A; --bg:#0D0D0D; --line:#1C1C1C; --line2:#262626; --text:#E8E8E8; --mute:#9A9A9A; --dim:#7A7A7A; --faint:#4A4A4A; --ok:#5DCAA5; --warn:#EF9F27; --crit:#E24B4A; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.45 Barlow, "Segoe UI", sans-serif; }
-  h1, h2, .display { font-family: "Barlow Condensed", "Segoe UI", sans-serif; letter-spacing: .02em; margin: 0; }
-  .mono { font-family: "JetBrains Mono", Consolas, monospace; }
-  .app { display: grid; grid-template-rows: 48px 1fr; height: 100%; }
-  header { display: flex; align-items: center; gap: 10px; padding: 0 18px; background: var(--bg2); border-bottom: 1px solid var(--line); }
-  .logo { width: 24px; height: 24px; border-radius: 5px; background: var(--gold); color: var(--bg); font: 700 15px "Barlow Condensed", sans-serif; display: flex; align-items: center; justify-content: center; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.45 Barlow, "Segoe UI", sans-serif; overflow: hidden; }
+  h1, .display { font-family: "Barlow Condensed", "Segoe UI", sans-serif; letter-spacing: .02em; margin: 0; font-weight: 600; }
+  .mono { font-family: "JetBrains Mono", Consolas, monospace; font-size: 11px; color: var(--dim); }
+  .app { position: relative; display: grid; grid-template-rows: 52px 1fr; height: 100%; }
+  .wm { position: absolute; left: 50%; top: 54%; width: 380px; height: 380px; transform: translate(-50%, -50%); opacity: .06; pointer-events: none; z-index: 0; }
+  header { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 0 22px; border-bottom: 1px solid var(--line); }
   header .name { font: 600 17px "Barlow Condensed", sans-serif; }
-  header .ver { color: var(--dim); font-size: 12px; }
-  main { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
-  aside { background: var(--bg2); border-right: 1px solid var(--line); padding: 20px; display: flex; flex-direction: column; gap: 18px; overflow: auto; }
-  section { padding: 22px 26px; display: flex; flex-direction: column; gap: 14px; overflow: auto; }
-  .label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
-  .card.gold { border-color: rgba(240,180,67,.35); }
-  .card.warn { border-color: rgba(251,146,60,.45); background: rgba(251,146,60,.07); }
+  .view { position: relative; z-index: 1; overflow: auto; }
+  .sec { padding: 22px 34px; border-bottom: 1px solid var(--line); }
+  .sec:last-child { border-bottom: 0; }
+  .dim { color: var(--dim); } .mute { color: var(--mute); } .gold { color: var(--gold); }
+  .label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #6A6A6A; }
   .row { display: flex; align-items: center; gap: 14px; }
   .grow { flex: 1; min-width: 0; }
-  .muted { color: var(--mute); } .dim { color: var(--dim); }
-  .check { display: flex; gap: 10px; align-items: flex-start; }
-  .check svg { flex: none; margin-top: 2px; }
-  .check .t { font-size: 13px; } .check .d { font-size: 12px; color: var(--dim); word-break: break-all; }
-  .btn { background: var(--gold); color: var(--bg); border: 0; border-radius: 4px; padding: 10px 18px; font: 700 14px "Barlow Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+  .hidden { display: none !important; }
+  .err { color: var(--crit); font-size: 13px; margin: 6px 0 0; }
+  .link { color: var(--gold); cursor: pointer; text-decoration: none; background: none; border: 0; font: inherit; padding: 0; }
+  .ghost { color: var(--mute); cursor: pointer; background: none; border: 0; font: inherit; font-size: 12px; padding: 0; }
+  .ghost:hover { color: var(--gold); }
+  .btn { background: var(--gold); color: var(--bg); border: 0; border-radius: 4px; padding: 9px 16px; font: 700 13px "Barlow Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
   .btn:hover { background: var(--gold2); }
   .btn.outline { background: transparent; color: var(--gold); border: 1px solid rgba(240,180,67,.35); }
-  .btn.small { padding: 6px 12px; font-size: 12px; }
-  .link { color: var(--gold); cursor: pointer; text-decoration: none; background: none; border: 0; font: inherit; padding: 0; }
-  .switch { flex: none; width: 52px; height: 30px; border-radius: 15px; border: 0; padding: 3px; cursor: pointer; display: flex; align-items: center; background: #2A2A2A; justify-content: flex-start; }
-  .switch.on { background: var(--gold); justify-content: flex-end; }
-  .switch span { width: 24px; height: 24px; border-radius: 50%; background: var(--text); display: block; }
-  .seg { flex: none; display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-  .seg button { border: 0; background: transparent; color: var(--text); padding: 7px 14px; font: inherit; font-size: 14px; cursor: pointer; }
-  .seg button.on { background: rgba(240,180,67,0.15); color: var(--gold); font-weight: 600; }
-  .seg button:disabled { cursor: default; opacity: 0.5; }
-  .opts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 20px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--line); }
-  .opts label { display: flex; gap: 10px; align-items: center; cursor: pointer; }
-  .opts input { accent-color: var(--gold); width: 16px; height: 16px; }
-  .code { font: 600 34px "JetBrains Mono", monospace; letter-spacing: .18em; color: var(--gold); }
-  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .chip { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--mute); cursor: pointer; font: inherit; font-size: 12px; }
-  .chip.on { border-color: var(--gold); color: var(--text); background: rgba(240,180,67,.12); }
-  .social { display: flex; gap: 8px; flex-wrap: wrap; }
-  .social button { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
-  .social button:hover { border-color: var(--gold); }
-  .social svg { width: 15px; height: 15px; fill: var(--gold); }
-  .hidden { display: none !important; }
-  .err { color: var(--crit); font-size: 13px; }
-  .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; padding: 0; }
-  .icon-btn:hover { border-color: var(--gold); }
-  .icon-btn.on { border-color: var(--gold); color: var(--gold); }
-  .icon-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn.small { padding: 5px 11px; font-size: 12px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .icon { background: none; border: 0; padding: 4px; color: #8A8A8A; cursor: pointer; display: inline-flex; border-radius: 6px; }
+  .icon:hover { color: var(--gold); }
+  .icon.on { color: var(--gold); }
+  .icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .bub { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .bub.g { background: var(--ok); box-shadow: 0 0 0 3px rgba(93,202,165,.15); }
+  .bub.y { background: var(--warn); box-shadow: 0 0 0 3px rgba(239,159,39,.15); }
+  .bub.r { background: var(--crit); box-shadow: 0 0 0 3px rgba(226,75,74,.15); }
+  .bub.x { background: #333; }
+  .bub.big { width: 11px; height: 11px; }
+  .steps { display: flex; gap: 22px; flex-wrap: wrap; font-size: 12px; color: var(--dim); }
+  .steps span { display: inline-flex; align-items: center; gap: 8px; }
   .modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .mode { text-align: left; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text); padding: 10px 12px; cursor: pointer; font: inherit; }
+  .mode { text-align: left; border: 1px solid #222; border-radius: 8px; background: rgba(13,13,13,.6); color: var(--text); padding: 10px 12px; cursor: pointer; font: inherit; }
   .mode:hover:not(:disabled) { border-color: rgba(240,180,67,.5); }
-  .mode.on { border-color: var(--gold); background: rgba(240,180,67,.08); }
+  .mode.on { border-color: var(--gold); background: rgba(240,180,67,.07); }
   .mode.on .mt { color: var(--gold); }
   .mode:disabled { cursor: default; opacity: .5; }
-  .mt { font-weight: 600; font-size: 15px; }
-  .mi { font-size: 12px; margin-top: 3px; display: flex; gap: 6px; align-items: center; }
-  .mi.y { color: var(--ok); } .mi.n { color: #555; }
-  .extras { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; padding-top: 10px; margin-top: 12px; border-top: 1px solid var(--line); font-size: 13px; }
-  .extras label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
-  .extras input { accent-color: var(--gold); width: 16px; height: 16px; }
+  .mt { font-size: 14px; }
+  .mi { font-size: 11px; margin-top: 3px; }
+  .mi.y { color: var(--ok); } .mi.n { color: var(--faint); }
+  .extras { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; margin-top: 10px; font-size: 12px; }
+  .extras label { display: flex; gap: 7px; align-items: center; cursor: pointer; }
+  .extras input { accent-color: var(--gold); }
   .extras.off { opacity: .4; pointer-events: none; }
-  .settings { display: grid; grid-template-columns: 180px minmax(0, 1fr); min-height: 0; }
-  .settings nav { background: var(--bg2); border-right: 1px solid var(--line); padding: 20px 12px; display: flex; flex-direction: column; gap: 2px; }
-  .settings nav button { text-align: left; border: 0; background: transparent; color: var(--mute); font: inherit; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
-  .settings nav button:hover { color: var(--text); }
-  .settings nav button.on { background: var(--line); color: var(--gold); }
-  .srow { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
-  .srow:first-of-type { border-top: 0; padding-top: 4px; }
+  .notice { border: 1px solid rgba(239,159,39,.4); background: rgba(239,159,39,.06); border-radius: 10px; padding: 14px 16px; margin-top: 14px; }
+  .notice.gold { border-color: rgba(240,180,67,.4); background: rgba(240,180,67,.05); }
+  .notice.red { border-color: rgba(226,75,74,.45); background: rgba(226,75,74,.06); }
+  .code { font: 600 30px "JetBrains Mono", monospace; letter-spacing: .18em; color: var(--gold); }
+  input[type=range] { accent-color: var(--gold); }
+  .links { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+  .links button { background: none; border: 0; padding: 0; color: #8A8A8A; font: inherit; font-size: 12px; cursor: pointer; }
+  .links button:hover { color: var(--gold); }
+  .switch { flex: none; width: 44px; height: 24px; border-radius: 12px; border: 0; padding: 3px; cursor: pointer; display: flex; align-items: center; background: #2A2A2A; justify-content: flex-start; }
+  .switch.on { background: var(--gold); justify-content: flex-end; }
+  .switch span { width: 18px; height: 18px; border-radius: 50%; background: var(--text); display: block; }
   .switch:disabled { cursor: default; opacity: .4; }
+  .srow { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .srow:first-of-type { border-top: 0; }
   .chrow { display: grid; grid-template-columns: 20px 190px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   .chrow:first-child { border-top: 0; }
   .radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #444; background: transparent; padding: 0; cursor: pointer; }
   .radio.on { border-color: var(--gold); background: radial-gradient(var(--gold) 40%, transparent 45%); }
   .radio:disabled { cursor: default; opacity: .35; }
   .tag { white-space: nowrap; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
-  .tag.auto { background: rgba(74,222,128,.12); color: var(--ok); } .tag.chosen { background: rgba(240,180,67,.14); color: var(--gold); } .tag.miss { background: rgba(248,113,113,.12); color: var(--crit); }
+  .tag.auto { background: rgba(93,202,165,.12); color: var(--ok); } .tag.chosen { background: rgba(240,180,67,.14); color: var(--gold); } .tag.miss { background: rgba(226,75,74,.12); color: var(--crit); }
   .path { font: 11px "JetBrains Mono", Consolas, monospace; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
 </style>
 </head>
 <body>
 <div class="app">
+  <svg class="wm" viewBox="0 0 512 512" aria-hidden="true"><polygon fill="#F0B443" points="65,91 446,91 256,421 214,349 325,157 103,157"/></svg>
   <header>
-    <div class="logo">7</div><span class="name">7Hills Link</span><span class="ver" id="ver"></span>
+    <svg width="20" height="20" viewBox="0 0 512 512" aria-hidden="true"><polygon fill="#F0B443" points="65,91 446,91 256,421 214,349 325,157 103,157"/></svg>
+    <span class="name">7Hills Link</span><span class="dim" style="font-size:12px" id="ver"></span>
     <span class="grow"></span>
-    <button class="link" onclick="api('open_dashboard')">Open my dashboard ↗</button>
-    <button class="icon-btn" id="gearBtn" onclick="toggleSettings()" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
+    <button class="ghost" onclick="api('open_dashboard')">Dashboard ↗</button>
+    <button class="icon" id="gearBtn" onclick="toggleSettings()" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
   </header>
 
-  <main id="mainView">
-    <aside>
-      <div class="row" id="member">
-        <div style="width:44px;height:44px;border-radius:50%;background:var(--line);display:flex;align-items:center;justify-content:center;color:var(--gold);font:600 15px 'Barlow Condensed'" id="ini">?</div>
-        <div class="grow"><div style="font-weight:600" id="handle">Not linked</div><div class="dim" style="font-size:12px" id="memberSub">Link this PC to your 7Net account</div></div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <span class="label">Status</span>
-        <div id="checks"></div>
-      </div>
-      <div class="card" style="margin-top:auto;padding:14px">
-        <span class="label">Right now</span>
-        <div class="display" style="font-size:19px;font-weight:600;margin-top:4px" id="nowTitle">—</div>
-        <div class="muted" style="font-size:13px" id="nowSub"></div>
-      </div>
-    </aside>
+  <div class="view" id="mainView">
+    <div class="notice gold hidden" id="updCard" style="margin:16px 34px 0">
+      <div class="row"><div class="grow"><div id="updTitle"></div><div class="dim" style="font-size:12px" id="updText"></div></div><button class="btn small" id="updBtn" onclick="updAction()"></button></div>
+    </div>
 
-    <section>
-      <div class="card gold hidden" id="updCard">
-        <div class="row">
-          <div class="grow"><div style="font-weight:600;font-size:15px" id="updTitle"></div>
-            <div class="muted" style="font-size:13px" id="updText"></div></div>
-          <button class="btn small" id="updBtn" onclick="updAction()"></button>
+    <div class="sec" style="padding-top:26px">
+      <div class="row" style="gap:16px">
+        <div style="width:44px;height:44px;border-radius:50%;background:#181818;color:var(--gold);display:flex;align-items:center;justify-content:center;font:600 15px 'Barlow Condensed'" id="ini">?</div>
+        <div class="grow">
+          <div class="row" style="gap:9px"><span class="bub big" id="headBub"></span><span class="display" style="font-size:22px" id="headline">Starting…</span></div>
+          <div class="dim" style="font-size:12px;margin-top:2px" id="subline"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="mono" id="delay" title=""></div>
+          <div class="mono" id="traffic"></div>
         </div>
       </div>
+      <div class="steps" style="margin-top:18px" id="steps"></div>
 
-      <div class="card gold hidden" id="linkCard">
-        <h2 style="font-size:22px">Link this PC to 7Net</h2>
-        <p class="muted" style="margin:6px 0 14px">Your browser opens 7hills.space. Sign in there and press <b>Connect this PC</b>.</p>
+      <div class="notice gold hidden" id="linkCard">
+        <div class="display" style="font-size:19px">Link this PC to 7Net</div>
+        <p class="mute" style="margin:4px 0 12px;font-size:13px">Your browser opens 7hills.space. Sign in there and press <b>Connect this PC</b>.</p>
         <div id="linkIdle"><button class="btn" onclick="startLink()">Link this PC</button></div>
-        <div id="linkWait" class="hidden">
-          <div class="code" id="linkCode"></div>
-          <p class="muted">Waiting for you to approve the code on 7hills.space… <button class="link" onclick="api('open_link_page')">Open the page again</button></p>
-        </div>
+        <div id="linkWait" class="hidden"><div class="code" id="linkCode"></div><p class="mute" style="font-size:13px">Waiting for you to approve the code on 7hills.space… <button class="link" onclick="api('open_link_page')">Open the page again</button></p></div>
         <p class="err" id="linkErr"></p>
       </div>
-
-      <div class="card warn hidden" id="gameCard">
-        <h2 style="font-size:20px">Star Citizen not found</h2>
-        <p class="muted" style="margin:6px 0 12px">Start the game once, then press Scan again.</p>
-        <button class="btn outline small" onclick="call('rescan')">Scan again</button>
+      <div class="notice hidden" id="gameCard">
+        <div class="display" style="font-size:19px">Star Citizen not found</div>
+        <p class="mute" style="margin:4px 0 12px;font-size:13px">Start the game once and press Scan again, or pick StarCitizen.exe under Settings → Game.</p>
+        <button class="btn outline small" onclick="call('rescan')">Scan again</button> <button class="btn outline small" onclick="toggleSettings('secGame')">Pick the game</button>
       </div>
-
-      <div class="card warn hidden" id="cfgCard">
-        <h2 style="font-size:20px">Switch on game telemetry</h2>
-        <p class="muted" style="margin:6px 0 12px">Adds three lines to the game's <span class="mono">user.cfg</span> for each install found and sets one Windows setting for your user. Nothing else is changed. Windows may ask for permission if the game is under Program Files.</p>
+      <div class="notice red hidden" id="cfgCard">
+        <div class="display" style="font-size:19px">Switch on game telemetry</div>
+        <p class="mute" style="margin:4px 0 12px;font-size:13px">Adds three lines to the game's <span class="mono">user.cfg</span> for each install found and sets one Windows setting for your user. Nothing else is changed. Windows may ask for permission if the game is under Program Files.</p>
         <button class="btn" onclick="enableTelemetry()">Switch on</button>
         <p class="err" id="cfgErr"></p>
       </div>
+      <div class="notice hidden" id="restartCard"><b>Restart Star Citizen</b> <span class="mute">so it picks up the new settings. Quit the RSI Launcher fully (tray icon → Quit) and start it again.</span></div>
+    </div>
 
-      <div class="card warn hidden" id="restartCard">
-        <b>Restart Star Citizen</b> <span class="muted">so it picks up the new settings. Quit the RSI Launcher fully (tray icon → Quit) and start it again.</span>
+    <div class="sec">
+      <div class="display" style="font-size:19px">Who can see your telemetry</div>
+      <div class="dim" style="font-size:12px;margin:2px 0 12px">You always see everything on your own dashboard. This decides what Org Command (manager and up) sees. Live data is deleted after 24 hours.</div>
+      <div class="modes" id="modes" role="radiogroup" aria-label="Share with Org Command">
+        <button type="button" class="mode" role="radio" data-mode="off" onclick="setMode('off')"><div class="mt">Off</div><div class="dim mi">Invisible to the org</div></button>
+        <button type="button" class="mode" role="radio" data-mode="online" onclick="setMode('online')"><div class="mt">Online only</div><div class="dim mi">A green dot, nothing else</div></button>
+        <button type="button" class="mode" role="radio" data-mode="full" onclick="setMode('full')"><div class="mt">Full</div><div class="dim mi">Shown on the Command map</div></button>
       </div>
-
-      <div class="card">
-        <h1 style="font-size:24px;font-weight:600">Who can see your telemetry</h1>
-        <p class="muted" style="margin:4px 0 12px;font-size:13px">You always see everything on your own dashboard. This decides what Org Command (manager and up) sees. Live data is deleted after 24 hours.</p>
-        <div class="modes" id="modes" role="radiogroup" aria-label="Share with Org Command">
-          <button type="button" class="mode" role="radio" data-mode="off" onclick="setMode('off')"><div class="mt">Off</div><div class="dim" style="font-size:12px;margin-bottom:4px">Invisible to the org</div></button>
-          <button type="button" class="mode" role="radio" data-mode="online" onclick="setMode('online')"><div class="mt">Online only</div><div class="dim" style="font-size:12px;margin-bottom:4px">A green dot, nothing else</div></button>
-          <button type="button" class="mode" role="radio" data-mode="full" onclick="setMode('full')"><div class="mt">Full</div><div class="dim" style="font-size:12px;margin-bottom:4px">Shown on the Command map</div></button>
-        </div>
-        <div class="extras" id="extras">
-          <span class="dim">Also share with Full:</span>
-          <label><input type="checkbox" id="optVitals" onchange="share({share_vitals:this.checked})"> Health and vitals</label>
-          <label><input type="checkbox" id="optUec" onchange="share({share_uec:this.checked})"> aUEC balance</label>
-        </div>
-        <p class="dim hidden" id="shareLinkHint" style="margin:10px 0 0;font-size:13px">Link this PC first.</p>
+      <div class="extras" id="extras">
+        <span class="dim">Also share with Full:</span>
+        <label><input type="checkbox" id="optVitals" onchange="share({share_vitals:this.checked})"> Health and vitals</label>
+        <label><input type="checkbox" id="optUec" onchange="share({share_uec:this.checked})"> aUEC balance</label>
       </div>
+      <p class="dim hidden" id="shareLinkHint" style="margin:10px 0 0;font-size:12px">Link this PC first.</p>
+    </div>
 
-      <div class="card row" style="padding:12px 16px">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F0B443" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        <span style="font-weight:600">Peacekeepers</span>
-        <span class="dim mono" style="font-size:12px;white-space:nowrap" id="sndTime">0:00 / 0:00</span>
-        <span class="grow"></span>
-        <button class="icon-btn" id="sndMute" onclick="toggleMute()" aria-label="Mute"></button>
-        <input type="range" id="sndVol" min="0" max="100" step="1" style="width:130px;accent-color:var(--gold)" oninput="setVolume(this.value)" onchange="call('set_sound', null, this.value/100)">
-        <span class="dim" style="font-size:12px;min-width:34px" id="sndPct"></span>
-        <button class="icon-btn" id="sndPlay" onclick="togglePlay()" aria-label="Play"></button>
-        <button class="icon-btn" onclick="stopMusic()" aria-label="Stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
-        <button class="icon-btn" id="sndRepeat" onclick="call('set_sound', null, null, !(S && S.sound && S.sound.repeat))" aria-label="Repeat" title="Repeat"><svg viewBox="0 0 24 24"><path d="M4 12V9a3 3 0 0 1 3-3h13l-3-3M20 12v3a3 3 0 0 1-3 3H4l3 3"/></svg></button>
-      </div>
-      <audio id="music" src="music.mp3" preload="auto"></audio>
+    <div class="sec row" style="padding-top:14px;padding-bottom:14px;gap:10px">
+      <button class="icon" id="sndPlay" onclick="togglePlay()" aria-label="Play"></button>
+      <button class="icon" onclick="stopMusic()" aria-label="Stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
+      <span class="dim" style="font-size:12px">Peacekeepers</span>
+      <span class="mono" style="white-space:nowrap" id="sndTime">0:00</span>
+      <input type="range" id="sndVol" min="0" max="100" step="1" style="flex:1;max-width:180px" oninput="setVolume(this.value)" onchange="saveVolume(this.value)">
+      <span class="mono" style="min-width:30px" id="sndPct"></span>
+      <button class="icon" id="sndMute" onclick="toggleMute()" aria-label="Mute"></button>
+      <button class="icon" id="sndRepeat" onclick="call('set_sound', null, null, !(S && S.sound && S.sound.repeat))" aria-label="Repeat" title="Repeat"><svg viewBox="0 0 24 24"><path d="M4 12V9a3 3 0 0 1 3-3h13l-3-3M20 12v3a3 3 0 0 1-3 3H4l3 3"/></svg></button>
+    </div>
+    <audio id="music" src="music.mp3" preload="auto"></audio>
 
-      <div class="card">
-        <div class="row" style="margin-bottom:10px"><span style="font-weight:600">7Hills Industries</span><span class="dim" style="font-size:12px">follow the org</span></div>
-        <div class="social">
-          <button onclick="api('open_link','site')"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2c.9 1.1 1.6 2.5 2 4h-4c.4-1.5 1.1-2.9 2-4ZM4.3 14a8 8 0 0 1 0-4h3.5a15 15 0 0 0 0 4H4.3Zm5.5 0a13 13 0 0 1 0-4h4.4a13 13 0 0 1 0 4H9.8Zm6.4 0a15 15 0 0 0 0-4h3.5a8 8 0 0 1 0 4h-3.5ZM12 20c-.9-1.1-1.6-2.5-2-4h4c-.4 1.5-1.1 2.9-2 4Z"/></svg>7hills.space</button>
-          <button onclick="api('open_link','discord')"><svg viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>Discord</button>
-          <button onclick="api('open_link','youtube')"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5Zm6 3v8l6-4-6-4Z"/></svg>YouTube</button>
-          <button onclick="api('open_link','spotify')"><svg viewBox="0 0 24 24"><path d="M9 18.5V7.2l11-2.2v11.6a2.6 2.6 0 1 1-2-2.5V8.9l-7 1.4v8.2a2.6 2.6 0 1 1-2-2.5v2.5Z"/></svg>Spotify</button>
-          <button onclick="api('open_link','apple')"><svg viewBox="0 0 24 24"><path d="M9 18.5V7.2l11-2.2v11.6a2.6 2.6 0 1 1-2-2.5V8.9l-7 1.4v8.2a2.6 2.6 0 1 1-2-2.5v2.5Z"/></svg>Apple Music</button>
-          <button onclick="api('open_link','rsi')"><svg viewBox="0 0 24 24"><path d="M12 2 4 6v6c0 5 3.4 9.3 8 10 4.6-.7 8-5 8-10V6l-8-4Z"/></svg>RSI org page</button>
-        </div>
-      </div>
-    </section>
-  </main>
+    <div class="sec links" style="padding-top:12px;padding-bottom:16px">
+      <span class="label">7Hills</span>
+      <button onclick="api('open_link','site')">7hills.space</button>
+      <button onclick="api('open_link','discord')">Discord</button>
+      <button onclick="api('open_link','youtube')">YouTube</button>
+      <button onclick="api('open_link','spotify')">Spotify</button>
+      <button onclick="api('open_link','apple')">Apple Music</button>
+      <button onclick="api('open_link','rsi')">RSI org</button>
+    </div>
+  </div>
 
-  <main id="settingsView" class="settings hidden">
-    <nav>
-      <button class="on" data-sec="secGeneral" onclick="goSec(this)">General</button>
-      <button data-sec="secGame" onclick="goSec(this)">Game</button>
-      <button data-sec="secUpdates" onclick="goSec(this)">Updates</button>
-      <button data-sec="secAccount" onclick="goSec(this)">Account</button>
+  <div class="view hidden" id="settingsView">
+    <div class="sec row" style="padding-top:18px;padding-bottom:12px">
+      <button class="ghost" onclick="toggleSettings()">← Back</button>
       <span class="grow"></span>
-      <button onclick="toggleSettings()">← Back</button>
-    </nav>
-    <section id="settingsScroll">
-      <h1 style="font-size:26px;font-weight:600">Settings</h1>
+      <span class="display" style="font-size:20px">Settings</span>
+      <span class="grow"></span><span style="width:40px"></span>
+    </div>
 
-      <div class="card" id="secGeneral">
-        <span class="label">General</span>
-        <div class="srow"><div class="grow"><div>Start with Windows</div><div class="dim" style="font-size:12px" id="startHint">Opens minimized in the tray, no music</div></div><button class="switch" id="prefStart" onclick="togglePref('start_with_windows')" aria-label="Start with Windows"><span></span></button></div>
-        <div class="srow"><div class="grow"><div>Minimize to tray</div><div class="dim" style="font-size:12px">Keeps running when the window is minimized or closed. Quit from the gold 7 in the tray.</div></div><button class="switch" id="prefTray" onclick="togglePref('tray')" aria-label="Minimize to tray"><span></span></button></div>
-        <div class="srow"><div class="grow"><div>Play music on start</div><div class="dim" style="font-size:12px">Mute and volume are on the main view</div></div><button class="switch" id="prefMusic" onclick="togglePref('play_on_start')" aria-label="Play music on start"><span></span></button></div>
-      </div>
+    <div class="sec" id="secGeneral">
+      <div class="label" style="margin-bottom:6px">General</div>
+      <div class="srow"><div class="grow"><div>Start with Windows</div><div class="dim" style="font-size:12px" id="startHint">Opens minimized in the tray, no music</div></div><button class="switch" id="prefStart" onclick="togglePref('start_with_windows')" aria-label="Start with Windows"><span></span></button></div>
+      <div class="srow"><div class="grow"><div>Minimize to tray</div><div class="dim" style="font-size:12px">Keeps running when the window is minimized or closed. Quit from the gold 7 in the tray.</div></div><button class="switch" id="prefTray" onclick="togglePref('tray')" aria-label="Minimize to tray"><span></span></button></div>
+      <div class="srow"><div class="grow"><div>Play music on start</div><div class="dim" style="font-size:12px">Mute and volume are on the main view</div></div><button class="switch" id="prefMusic" onclick="togglePref('play_on_start')" aria-label="Play music on start"><span></span></button></div>
+    </div>
 
-      <div class="card" id="secGame">
-        <span class="label">Game</span>
-        <p class="dim" style="font-size:12px;margin:6px 0 4px">Found by itself where possible. Press Browse and pick StarCitizen.exe if a channel is missing or wrong. The dot marks the channel to read from.</p>
-        <div id="channels"></div>
-        <p class="err" id="pathErr" style="margin:6px 0 0"></p>
-        <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn outline small" onclick="call('rescan')">Scan again</button></div>
-      </div>
+    <div class="sec" id="secGame">
+      <div class="label">Game</div>
+      <p class="dim" style="font-size:12px;margin:6px 0 4px">Found by itself where possible. Press Browse and pick StarCitizen.exe if a channel is missing or wrong. The dot marks the channel to read from.</p>
+      <div id="channels"></div>
+      <p class="err" id="pathErr"></p>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn outline small" onclick="call('rescan')">Scan again</button></div>
+    </div>
 
-      <div class="card" id="secUpdates">
-        <span class="label">Updates</span>
-        <div class="srow"><div class="grow"><div>Install automatically</div><div class="dim" style="font-size:12px">Only when the game is not running</div></div><button class="switch" id="prefAuto" onclick="call('set_auto_update', !(S && S.update && S.update.auto))" aria-label="Install updates automatically"><span></span></button></div>
-        <div class="srow"><div class="grow dim" style="font-size:13px" id="updInfo"></div><button class="btn outline small" id="checkBtn" onclick="checkNow()">Check now</button></div>
-      </div>
+    <div class="sec" id="secUpdates">
+      <div class="label" style="margin-bottom:6px">Updates</div>
+      <div class="srow"><div class="grow"><div>Install automatically</div><div class="dim" style="font-size:12px">Only when the game is not running</div></div><button class="switch" id="prefAuto" onclick="call('set_auto_update', !(S && S.update && S.update.auto))" aria-label="Install updates automatically"><span></span></button></div>
+      <div class="srow"><div class="grow dim" style="font-size:13px" id="updInfo"></div><button class="btn outline small" id="checkBtn" onclick="checkNow()">Check now</button></div>
+    </div>
 
-      <div class="card" id="secAccount">
-        <span class="label">Account</span>
-        <div class="srow"><div class="grow" id="acctText">Not linked</div><button class="btn outline small hidden" id="unlinkBtn" style="color:var(--crit);border-color:rgba(248,113,113,.4)" onclick="if(confirm('Unlink this PC from 7Net?')) call('unlink')">Unlink this PC</button></div>
-      </div>
-    </section>
-  </main>
+    <div class="sec" id="secAccount">
+      <div class="label" style="margin-bottom:6px">Account</div>
+      <div class="srow"><div class="grow" id="acctText">Not linked</div><button class="btn outline small hidden" id="unlinkBtn" style="color:var(--crit);border-color:rgba(226,75,74,.4)" onclick="if(confirm('Unlink this PC from 7Net?')) call('unlink')">Unlink this PC</button></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -242,21 +212,16 @@
   const $ = id => document.getElementById(id)
   const show = (id, on) => $(id).classList.toggle('hidden', !on)
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
-  const ok = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>'
-  const no = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg>'
   const ICON = {
     play: '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>',
     pause: '<svg viewBox="0 0 24 24"><path d="M7 4h4v16H7zM13 4h4v16h-4z"/></svg>',
     vol: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/></svg>',
     mute: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>',
   }
-  const YES = '<span class="mi y">✓ ', NOPE = '<span class="mi n">✕ '
-  const SEES = {
-    off: [0, 0, 0, 0], online: [1, 0, 0, 0], full: [1, 1, 1, 1],
-  }
+  const SEES = { off: [0, 0, 0, 0], online: [1, 0, 0, 0], full: [1, 1, 1, 1] }
   const SEES_LABELS = ['In game', 'Ship and seat', 'Location', 'Ship status']
   document.querySelectorAll('.mode').forEach(b => {
-    b.insertAdjacentHTML('beforeend', SEES[b.dataset.mode].map((v, i) => (v ? YES : NOPE) + SEES_LABELS[i] + '</span>').join(''))
+    b.insertAdjacentHTML('beforeend', SEES[b.dataset.mode].map((v, i) => '<div class="mi ' + (v ? 'y">✓ ' : 'n">✕ ') + SEES_LABELS[i] + '</div>').join(''))
   })
 
   // ------------------------------------------------------------ music
@@ -265,38 +230,36 @@
   const fmt = t => isFinite(t) ? Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0') : '0:00'
   function paintMusic() {
     const snd = (S && S.sound) || {}
+    const silent = snd.muted || !snd.volume
     $('sndPlay').innerHTML = music.paused ? ICON.play : ICON.pause
     $('sndPlay').setAttribute('aria-label', music.paused ? 'Play' : 'Pause')
-    $('sndMute').innerHTML = snd.muted ? ICON.mute : ICON.vol
+    $('sndMute').innerHTML = silent ? ICON.mute : ICON.vol
     $('sndMute').classList.toggle('on', !!snd.muted)
     $('sndMute').setAttribute('aria-label', snd.muted ? 'Unmute' : 'Mute')
-    $('sndVol').style.opacity = snd.muted ? .45 : 1
-    $('sndTime').textContent = fmt(music.currentTime) + ' / ' + fmt(music.duration)
+    $('sndVol').style.opacity = snd.muted ? .4 : 1
+    $('sndTime').textContent = fmt(music.currentTime)
     music.loop = !!snd.repeat
     $('sndRepeat').classList.toggle('on', !!snd.repeat)
     $('sndRepeat').setAttribute('aria-pressed', snd.repeat ? 'true' : 'false')
   }
   ;['play', 'pause', 'ended', 'timeupdate', 'loadedmetadata'].forEach(e => music.addEventListener(e, paintMusic))
   function setVolume(v) { music.volume = v / 100; $('sndPct').textContent = Math.round(v) + '%' }
+  function saveVolume(v) { call('set_sound', null, v / 100) }
   function togglePlay() { if (music.paused) music.play().catch(() => {}); else music.pause() }
   function stopMusic() { music.pause(); music.currentTime = 0; paintMusic() }
   function toggleMute() { call('set_sound', !(S && S.sound && S.sound.muted), null) }
 
   // ------------------------------------------------------------ settings view
-  function toggleSettings() {
-    const open = $('settingsView').classList.contains('hidden')
+  function toggleSettings(section) {
+    const open = typeof section === 'string' || $('settingsView').classList.contains('hidden')
     show('settingsView', open); show('mainView', !open)
     $('gearBtn').classList.toggle('on', open)
+    if (open && typeof section === 'string') $(section).scrollIntoView({ block: 'start' })
   }
-  function goSec(btn) {
-    document.querySelectorAll('.settings nav button[data-sec]').forEach(b => b.classList.toggle('on', b === btn))
-    $(btn.dataset.sec).scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-  let chanHtmlLock = false
-  async function browseGame(ch) { chanHtmlLock = true; try { const st = await api('browse_game', ch); chanHtmlLock = false; if (st) render(st) } finally { chanHtmlLock = false } }
   function togglePref(key) { call('set_pref', key, !(S && S.prefs && S.prefs[key])) }
   const setSwitch = (id, on) => $(id).classList.toggle('on', !!on)
   async function checkNow() { $('checkBtn').disabled = true; $('updInfo').textContent = 'Checking…'; try { await call('check_updates') } finally { $('checkBtn').disabled = false } }
+  async function browseGame(ch) { const st = await api('browse_game', ch); if (st) render(st) }
 
   function api(name, ...args) { return window.pywebview ? window.pywebview.api[name](...args) : Promise.resolve(null) }
   async function call(name, ...args) { const s = await api(name, ...args); if (s) render(s) }
@@ -311,6 +274,21 @@
   function setMode(m) { if (modeOf(S && S.settings) !== m) share({ share_mode: m }) }
   function updAction() { const u = (S && S.update) || {}; if (u.state === 'error') checkNow(); else call('update_now') }
 
+  // The data path: each step is green, or the first one that is not decides the headline.
+  function pathOf(s) {
+    const steps = [
+      { name: 'Game', ok: s.game_found, bad: 'y', head: 'Star Citizen not found' },
+      { name: 'Telemetry', ok: s.cfg_ok && s.env_ok, bad: 'r', head: 'Telemetry is off' },
+      { name: 'Connected', ok: s.game_connected, bad: 'y', head: s.needs_restart ? 'Restart Star Citizen' : (s.proto_error ? 'Game connection failed' : 'Start the game and load in') },
+      { name: '7Net', ok: s.linked && !s.upload_error && s.last_upload_ago !== null, bad: !s.linked ? 'y' : s.upload_error ? 'r' : 'y',
+        head: !s.linked ? 'Link this PC' : s.upload_error ? '7Net: ' + s.upload_error : 'Waiting for game data' },
+    ]
+    if (s.proto_error && !s.game_connected) steps[2].bad = 'r'
+    let blocked = -1
+    steps.forEach((st, i) => { st.color = blocked >= 0 ? 'x' : st.ok ? 'g' : st.bad; if (!st.ok && blocked < 0) blocked = i })
+    return { steps, head: blocked < 0 ? { text: 'Live on 7Net', color: 'g' } : { text: steps[blocked].head, color: steps[blocked].bad } }
+  }
+
   function render(s) {
     const first = S === null
     S = s
@@ -319,37 +297,40 @@
     if (document.activeElement !== $('sndVol')) { $('sndVol').value = Math.round((snd.volume ?? 0.1) * 100); setVolume($('sndVol').value) }
     if (first && !musicStarted) {
       musicStarted = true
-      if (s.prefs && s.prefs.play_on_start && !snd.muted && !s.autostarted) music.play().catch(() => {})
+      // Muted or at 0 counts as off: nothing starts until they press Play.
+      if (s.prefs && s.prefs.play_on_start && !snd.muted && snd.volume > 0 && !s.autostarted) music.play().catch(() => {})
     }
     paintMusic()
 
     const u = s.update || {}
-    const upText = { up_to_date: ' · up to date', checking: ' · checking for updates', downloading: ' · downloading v' + u.latest, ready: ' · v' + u.latest + ' ready', installing: ' · updating…', error: ' · update check failed', source: ' · source build' }[u.state] || ''
-    $('ver').textContent = 'v' + s.version + upText
+    const upText = { checking: ' · checking', downloading: ' · downloading v' + u.latest, ready: ' · v' + u.latest + ' ready', installing: ' · updating…', error: ' · update check failed' }[u.state] || ''
+    $('ver').textContent = s.version + upText
     const failed = u.state === 'error' && !!u.latest
     show('updCard', u.state === 'ready' || u.state === 'installing' || failed)
-    $('updCard').style.borderColor = failed ? 'rgba(248,113,113,.5)' : ''
+    $('updCard').classList.toggle('red', failed)
     $('updTitle').textContent = failed ? 'Update failed' : u.state === 'installing' ? 'Updating…' : 'v' + u.latest + ' ready'
     $('updText').textContent = failed ? 'Kept v' + s.version + '. ' + (u.error || '') + ' Details in update.log.' : u.state === 'installing' ? 'The window closes and the new version opens in a moment.' : 'Installs when you quit the game, or now. You stay linked.'
     $('updBtn').textContent = failed ? 'Try again' : 'Restart now'
     $('updBtn').disabled = u.state === 'installing'
 
     const name = s.member ? s.member.handle : null
-    $('handle').textContent = name || (s.linked ? 'Linked' : 'Not linked')
     $('ini').textContent = name ? name.slice(0, 2).toUpperCase() : '?'
-    $('memberSub').textContent = s.linked ? 'Signed in via 7hills.space' : 'Link this PC to your 7Net account'
-
-    const checks = [
-      [s.game_found, 'Star Citizen found', s.game_found ? s.channel + ' · ' + (s.installs.find(i => i.channel === s.channel) || {}).folder : 'No install found'],
-      [s.cfg_ok && s.env_ok, 'Telemetry switched on', s.cfg_ok && s.env_ok ? 'user.cfg ✓' : 'Not yet'],
-      [s.game_connected, 'Game connected', s.game_connected ? '127.0.0.1:' + s.port + ' · ' + s.fps + ' fps' : (s.proto_error || 'Start the game and load in')],
-      [s.linked && !s.upload_error, '7hills.space', !s.linked ? 'Not linked' : s.upload_error ? s.upload_error : s.last_upload_ago !== null ? 'sent ' + s.last_upload_ago + ' s ago' : 'waiting for game data'],
-    ]
-    $('checks').innerHTML = checks.map(([good, t, d]) => '<div class="check" style="margin-bottom:10px">' + (good ? ok : no) + '<div><div class="t">' + esc(t) + '</div><div class="d mono">' + esc(d) + '</div></div></div>').join('')
-
+    const p = pathOf(s)
+    $('headline').textContent = p.head.text
+    $('headBub').className = 'bub big ' + p.head.color
     const n = s.now || {}
-    $('nowTitle').textContent = n.ship ? n.ship + (n.seat ? ' · seated' : '') : n.locomotion ? (n.locomotion === 'on_foot' ? 'On foot' : n.locomotion.toUpperCase()) : '—'
-    $('nowSub').textContent = n.ship ? ['Gear ' + (n.gear || '?'), n.mode, n.power_on ? 'powered' : 'power off'].filter(Boolean).join(' · ') : ''
+    const where = n.ship ? n.ship + (n.seat ? ', seated' : '') : n.locomotion === 'on_foot' ? 'On foot' : ''
+    $('subline').textContent = [name || (s.linked ? 'Linked' : 'Not linked'), where, s.game_found ? s.channel : ''].filter(Boolean).join(' · ')
+    const extra = n.ship ? ['Gear ' + (n.gear || '?'), n.mode, n.power_on ? 'Power on' : 'Power off'].filter(Boolean).join(' · ') : ''
+    $('steps').innerHTML = p.steps.map(st => '<span><span class="bub ' + st.color + '"></span>' + esc(st.name) + '</span>').join('') + (extra ? '<span style="margin-left:auto">' + esc(extra) + '</span>' : '')
+
+    const d = s.delay || {}, t = s.traffic || {}
+    const live = p.head.color === 'g'
+    const total = (d.wait ?? 0) + (d.upload ?? 0)
+    $('delay').textContent = live && d.upload !== null && d.upload !== undefined ? '≈ ' + total.toFixed(2) + ' s to 7Net' : ''
+    $('delay').style.color = total < 0.5 ? 'var(--ok)' : total < 2 ? 'var(--warn)' : 'var(--crit)'
+    $('delay').title = live ? 'wait ' + Math.round((d.wait || 0) * 1000) + ' ms · upload ' + Math.round((d.upload || 0) * 1000) + ' ms' : ''
+    $('traffic').textContent = s.linked && (t.up || t.down) ? '↑' + t.up + ' ↓' + t.down + ' KB/s' : ''
 
     show('linkCard', !s.linked)
     show('linkWait', !!s.link); show('linkIdle', !s.link)
@@ -369,23 +350,26 @@
     $('optVitals').checked = !!(s.settings && s.settings.share_vitals)
     $('optUec').checked = !!(s.settings && s.settings.share_uec)
 
-    const p = s.prefs || {}
-    setSwitch('prefStart', p.start_with_windows); setSwitch('prefTray', p.tray); setSwitch('prefMusic', p.play_on_start)
+    const pr = s.prefs || {}
+    setSwitch('prefStart', pr.start_with_windows); setSwitch('prefTray', pr.tray); setSwitch('prefMusic', pr.play_on_start)
     $('prefStart').disabled = !s.can_autostart
     $('startHint').textContent = s.can_autostart ? 'Opens minimized in the tray, no music' : 'Only in the packaged 7HillsLink.exe'
     setSwitch('prefAuto', u.auto)
     const ago = s.update_checked_ago
-    if (!$('checkBtn').disabled) $('updInfo').textContent = 'v' + s.version + upText + (ago !== null && ago !== undefined ? ' · checked ' + (ago < 60 ? 'just now' : Math.round(ago / 60) + ' min ago') : '')
+    const upInfo = { up_to_date: ' · up to date', source: ' · source build' }[u.state] || upText
+    if (!$('checkBtn').disabled) $('updInfo').textContent = 'v' + s.version + upInfo + (ago !== null && ago !== undefined ? ' · checked ' + (ago < 60 ? 'just now' : Math.round(ago / 60) + ' min ago') : '')
+
     const byCh = {}; (s.installs || []).forEach(i => { byCh[i.channel] = i })
-    const chans = (s.channels_known || []).concat(Object.keys(byCh).filter(c => !(s.channels_known || []).includes(c)))
-    if (!chanHtmlLock) $('channels').innerHTML = chans.map(c => {
+    const known = s.channels_known || []
+    const chans = known.concat(Object.keys(byCh).filter(c => !known.includes(c)))
+    $('channels').innerHTML = chans.map(c => {
       const i = byCh[c], on = i && c === s.channel
       const tag = !i ? '<span class="tag miss">not found</span>' : i.source === 'chosen' ? '<span class="tag chosen">chosen</span>' : '<span class="tag auto">found</span>'
       const q = '\'' + esc(c) + '\''
       return '<div class="chrow"><button class="radio' + (on ? ' on' : '') + '"' + (i ? '' : ' disabled') + ' aria-label="Read from ' + esc(c) + '" onclick="call(\'set_channel\',' + q + ')"></button>' +
         '<div>' + esc(c) + tag + '</div><div class="path" title="' + esc(i ? i.exe : '') + '">' + (i ? '&lrm;' + esc(i.exe) : '—') + '</div>' +
         '<div style="display:flex;gap:6px"><button class="btn outline small" onclick="browseGame(' + q + ')">Browse</button>' +
-        (i && i.source === 'chosen' ? '<button class="btn outline small" style="color:var(--dim);border-color:var(--line)" onclick="call(\'reset_game_path\',' + q + ')">Reset</button>' : '') + '</div></div>'
+        (i && i.source === 'chosen' ? '<button class="btn outline small" style="color:var(--dim);border-color:var(--line2)" onclick="call(\'reset_game_path\',' + q + ')">Reset</button>' : '') + '</div></div>'
     }).join('')
     $('pathErr').textContent = s.path_error || ''
     $('acctText').textContent = s.linked ? 'Linked as ' + (name || 'this PC') : 'Not linked'
