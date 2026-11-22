@@ -147,7 +147,6 @@ def run_window(updated_from: str | None = None) -> int:
         tray.start()
         threading.Thread(target=tray_title_loop, name="tray-title", daemon=True).start()
         if updated_from:
-            updater.mark_ready()   # tells the previous version the update worked
             threading.Thread(target=updater.cleanup, name="update-cleanup", daemon=True).start()
 
     webview.start(started)

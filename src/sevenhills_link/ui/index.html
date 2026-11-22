@@ -214,7 +214,7 @@
     if ((snd.seq ?? 0) > lastSoundSeq) playJingle(false)
     lastSoundSeq = snd.seq ?? 0
     const u = s.update || {}
-    const upText = { up_to_date: ' · up to date', checking: ' · checking for updates', downloading: ' · downloading v' + u.latest, ready: ' · v' + u.latest + ' ready', installing: ' · updating…' }[u.state] || ''
+    const upText = { up_to_date: ' · up to date', checking: ' · checking for updates', downloading: ' · downloading v' + u.latest, ready: ' · v' + u.latest + ' ready', installing: ' · updating…', error: ' · update check failed' }[u.state] || ''
     $('ver').textContent = 'v' + s.version + upText
     show('updCard', u.state === 'ready' || u.state === 'installing' || (u.state === 'error' && !!u.latest))
     $('updTitle').textContent = u.state === 'installing' ? 'Updating…' : '7Hills Link v' + u.latest + ' is ready'
