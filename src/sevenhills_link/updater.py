@@ -4,10 +4,11 @@
 2. download(): fetches 7HillsLink.exe to %LOCALAPPDATA%\\7HillsLink\\update\\ and checks
    its SHA-256 against the release (the asset digest GitHub reports, or the
    7HillsLink.exe.sha256 file the build uploads). A file that does not match is deleted.
-3. install(): only in the packaged exe. Starts a small PowerShell script and
-   exits; the script waits for 7Hills Link to close, copies the new exe over
-   the old one (kept as 7HillsLink.old.exe), starts it with --updated and waits
-   for its "ready" marker; if none appears within 20 s it puts the old exe back.
+3. install(): only in the packaged exe. Starts the downloaded exe with
+   --install-to and exits; that process (install_to) waits for this one to
+   close, copies itself over the old exe (kept as 7HillsLink.old.exe), starts it
+   with --updated and waits for its "ready" marker; if none appears within 20 s
+   it puts the old exe back. Steps go to update\\update.log.
 4. cleanup(): the new process removes 7HillsLink.old.exe at startup.
 
 Downloads come only from github.com / objects.githubusercontent.com over HTTPS.
@@ -126,57 +127,88 @@ def mark_ready() -> None:
         pass
 
 
-SWAP_SCRIPT = r"""
-$ErrorActionPreference = 'SilentlyContinue'
-$pids = @({pids})
-$current = '{current}'
-$backup = '{backup}'
-$new = '{new}'
-$marker = '{marker}'
-$log = '{log}'
-function Log($m) {{ Add-Content -Path $log -Value ((Get-Date -Format s) + ' ' + $m) }}
-Log 'waiting for 7Hills Link to exit'
-foreach ($p in $pids) {{ Wait-Process -Id $p -Timeout 30 }}
-Start-Sleep -Milliseconds 500
-Copy-Item -LiteralPath $current -Destination $backup -Force
-$ok = $false
-for ($i = 0; $i -lt 40; $i++) {{
-  try {{ Copy-Item -LiteralPath $new -Destination $current -Force -ErrorAction Stop; $ok = $true; break }} catch {{ Start-Sleep -Milliseconds 500 }}
-}}
-if (-not $ok) {{ Log 'could not replace the exe; starting the old one'; Start-Process -FilePath $current; exit 1 }}
-Remove-Item -LiteralPath $marker -Force
-$proc = Start-Process -FilePath $current -ArgumentList '--updated','{old_version}' -PassThru
-for ($i = 0; $i -lt 40; $i++) {{ if (Test-Path -LiteralPath $marker) {{ Log 'updated'; exit 0 }}; Start-Sleep -Milliseconds 500 }}
-Log 'new version did not start; restoring the old one'
-Stop-Process -Id $proc.Id -Force
-Start-Sleep -Milliseconds 800
-Copy-Item -LiteralPath $backup -Destination $current -Force
-Start-Process -FilePath $current
-exit 2
-"""
+def _log(msg: str) -> None:
+    try:
+        with open(update_dir() / "update.log", "a", encoding="utf-8") as f:
+            f.write(time.strftime("%Y-%m-%dT%H:%M:%S ") + msg + "\n")
+    except OSError:
+        pass
 
 
-def _ps_quote(p: Path | str) -> str:
-    return str(p).replace("'", "''")
+def _pid_alive(pid: int) -> bool:
+    try:
+        import psutil
+        return psutil.pid_exists(pid)
+    except Exception:
+        return False
 
 
-def swap_script(current: Path, new_exe: Path, pids: list[int]) -> str:
-    return SWAP_SCRIPT.format(
-        pids=",".join(str(int(p)) for p in pids),
-        current=_ps_quote(current), backup=_ps_quote(current.with_name(current.stem + ".old.exe")),
-        new=_ps_quote(new_exe), marker=_ps_quote(_ready_marker()), log=_ps_quote(update_dir() / "update.log"),
-        old_version=__version__,
-    )
+def _copy_retry(src: Path, dst: Path, tries: int = 40) -> bool:
+    import shutil
+    for _ in range(tries):
+        try:
+            shutil.copyfile(src, dst)
+            return True
+        except OSError:
+            time.sleep(0.5)
+    return False
+
+
+def _start(exe: Path, *args: str):
+    flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    return subprocess.Popen([str(exe), *args], close_fds=True, creationflags=flags, cwd=str(exe.parent))
+
+
+def install_to(target: Path, wait_pids: list[int], from_version: str) -> int:
+    """Run by the NEW exe (from the update folder): put itself in place of the old one.
+
+    Waits for the old 7Hills Link to exit, keeps it as 7HillsLink.old.exe, copies
+    this exe over it, starts it with --updated and waits for its "ready" marker.
+    If none comes within 20 s, the old exe is put back and started.
+    """
+    me = Path(sys.executable).resolve()
+    target = Path(target)
+    backup = target.with_name(target.stem + ".old.exe")
+    _log(f"installing {__version__} over {from_version} at {target}")
+    deadline = time.time() + 30
+    while time.time() < deadline and any(_pid_alive(p) for p in wait_pids):
+        time.sleep(0.25)
+    time.sleep(0.5)
+    if not _copy_retry(target, backup, tries=10):
+        _log("could not keep a backup; leaving the old version in place")
+        _start(target)
+        return 1
+    if not _copy_retry(me, target):
+        _log("could not replace the exe; starting the old one")
+        _start(target)
+        return 1
+    try:
+        _ready_marker().unlink()
+    except OSError:
+        pass
+    proc = _start(target, "--updated", from_version)
+    for _ in range(40):
+        if _ready_marker().exists():
+            _log("updated")
+            return 0
+        time.sleep(0.5)
+    _log("new version did not start; restoring the old one")
+    try:
+        proc.kill()
+    except OSError:
+        pass
+    time.sleep(0.8)
+    _copy_retry(backup, target)
+    _start(target)
+    return 2
 
 
 def install(new_exe: Path) -> bool:
-    """Hand the swap to a small PowerShell script that runs after this app exits.
+    """Start the downloaded exe as the installer and let this app exit.
 
     A running exe (and PyInstaller's open archive) cannot be replaced, so the
-    script waits for both 7Hills Link processes to end, copies the new exe over
-    the old one, starts it with --updated and waits for its "ready" marker; if
-    none comes within 20 s it puts the old exe back and starts that. Returns
-    True: the caller should exit now. Progress goes to update\\update.log.
+    new exe does the swap once this one has closed (see install_to). No script
+    engine is involved. Returns True: the caller should exit now.
     """
     if not can_install():
         raise UpdateError("Updates install only in the packaged 7HillsLink.exe")
@@ -188,14 +220,12 @@ def install(new_exe: Path) -> bool:
         pids.append(os.getppid())   # PyInstaller's launcher process
     except Exception:
         pass
-    script = update_dir() / "swap.ps1"
-    script.write_text(swap_script(current, Path(new_exe), pids), encoding="utf-8-sig")
-    flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    _log(f"{__version__}: handing over to {Path(new_exe).name}")
     try:
-        subprocess.Popen(["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", str(script)],
-                         close_fds=True, creationflags=flags)
+        _start(Path(new_exe), "--install-to", str(current), "--wait", ",".join(map(str, pids)), "--from-version", __version__)
     except OSError as e:
-        raise UpdateError(f"Could not start the updater: {e}") from e
+        _log(f"could not start the installer: {e}")
+        raise UpdateError(f"Could not start the installer: {e}") from e
     return True
 
 

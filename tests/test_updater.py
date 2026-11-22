@@ -71,12 +71,43 @@ def test_source_build_never_installs():
         updater.install(updater.update_dir() / "x.exe")
 
 
-def test_swap_script(tmp_path, monkeypatch):
-    from pathlib import Path
-    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
-    cur = Path("C:/Users/o'brien/7HillsLink/7HillsLink.exe")
-    s = updater.swap_script(cur, Path("C:/x/7HillsLink-9.9.9.exe"), [123, 456])
-    assert "$pids = @(123,456)" in s
-    assert "o''brien" in s and "7HillsLink.old.exe" in s      # quotes escaped for PowerShell
-    assert "'--updated','" + updater.__version__ + "'" in s
-    assert "{" not in s.split("function Log")[0].replace("@(", "")  # all placeholders filled
+def _fake_install(tmp_path, monkeypatch, new_starts: bool):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "lad"))
+    target = tmp_path / "app" / "7HillsLink.exe"
+    target.parent.mkdir()
+    target.write_bytes(b"old")
+    new = tmp_path / "7HillsLink-9.9.9.exe"
+    new.write_bytes(b"new")
+    started = []
+
+    class P:
+        def kill(self):
+            started.append("killed")
+
+    def fake_start(exe, *args):
+        started.append((exe.read_bytes(), args))
+        if new_starts and args[:1] == ("--updated",):
+            updater.mark_ready()
+        return P()
+    monkeypatch.setattr(updater.sys, "executable", str(new))
+    monkeypatch.setattr(updater, "_start", fake_start)
+    monkeypatch.setattr(updater, "_pid_alive", lambda pid: False)
+    monkeypatch.setattr(updater.time, "sleep", lambda s: None)
+    rc = updater.install_to(target, [1, 2], "0.4.3")
+    log = (updater.update_dir() / "update.log").read_text()
+    return rc, target, started, log
+
+
+def test_install_to_swaps_and_starts_new(tmp_path, monkeypatch):
+    rc, target, started, log = _fake_install(tmp_path, monkeypatch, new_starts=True)
+    assert rc == 0 and target.read_bytes() == b"new"
+    assert target.with_name("7HillsLink.old.exe").read_bytes() == b"old"
+    assert started == [(b"new", ("--updated", "0.4.3"))]
+    assert log.strip().endswith("updated")
+
+
+def test_install_to_rolls_back(tmp_path, monkeypatch):
+    rc, target, started, log = _fake_install(tmp_path, monkeypatch, new_starts=False)
+    assert rc == 2 and target.read_bytes() == b"old"
+    assert started[-1] == (b"old", ())
+    assert "restoring the old one" in log

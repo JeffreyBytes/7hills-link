@@ -6,7 +6,7 @@ Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star 
 
 ## What it does
 
-1. **Finds Star Citizen** (running game, RSI Launcher files, common install folders) — LIVE, PTU and the other channels.
+1. **Finds Star Citizen** (running game, RSI Launcher files, common install folders) — LIVE, PTU and the other channels. If it misses one, pick `StarCitizen.exe` for that channel under Settings → Game.
 2. **Switches on the game's telemetry** when you press *Switch on*: adds three lines to `StarCitizen\<channel>\user.cfg` and sets `GRPC_CLIENT_SERVER_ENABLED=true` for your Windows user. Nothing else in the file changes. Restart the game afterwards.
    ```
    grpc.client.server.enabled = 1
@@ -24,7 +24,7 @@ See **[docs/TELEMETRY.md](docs/TELEMETRY.md)** for everything we have found: how
 
 ## Updates
 
-From v0.4.0 the client checks this repository's latest release at start and every 6 hours, downloads a newer `7HillsLink.exe` and checks its SHA-256 against the release. It installs by itself when the game is not running (you can switch that off under Settings and press *Restart now* instead). The client closes and a small PowerShell script swaps the exe (the old one is kept as `7HillsLink.old.exe`), starts the new one, and puts the old one back if the new one does not start within 20 seconds. The steps are logged in `%LOCALAPPDATA%\7HillsLink\update\update.log`. v0.4.0 and v0.4.1 cannot update themselves; install v0.4.2 or later by hand once. Keep the exe in a folder you can write to, such as Downloads or Desktop.
+From v0.4.0 the client checks this repository's latest release at start and every 6 hours, downloads a newer `7HillsLink.exe` and checks its SHA-256 against the release. It installs by itself when the game is not running (you can switch that off under Settings and press *Restart now* instead). The client starts the downloaded exe as the installer and closes; the new exe copies itself over the old one (kept as `7HillsLink.old.exe`), starts, and puts the old one back if it does not start within 20 seconds. The steps are logged in `%LOCALAPPDATA%\7HillsLink\update\update.log`. v0.4.0 to v0.4.3 may not update themselves; install v0.4.4 or later by hand once. Keep the exe in a folder you can write to, such as Downloads or Desktop.
 
 ## What it does not do
 

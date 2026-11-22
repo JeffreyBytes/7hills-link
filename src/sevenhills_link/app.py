@@ -30,10 +30,13 @@ class JsApi:
     def __init__(self, core: Core, autostart: bool):
         self._core = core
         self._autostart = autostart
+        self._window = None   # set once the window exists; needed for the file dialog
+        self._path_error: str | None = None
 
     def status(self):
         s = self._core.status()
         s["autostarted"] = self._autostart
+        s["path_error"] = self._path_error
         return s
 
     def enable_telemetry(self):
@@ -75,8 +78,27 @@ class JsApi:
         self._core.updates.set_auto(bool(on))
         return self.status()
 
-    def set_sound(self, muted=None, volume=None):
-        self._core.set_sound(muted if muted is None else bool(muted), volume if volume is None else float(volume))
+    def set_sound(self, muted=None, volume=None, repeat=None):
+        self._core.set_sound(None if muted is None else bool(muted), None if volume is None else float(volume),
+                             None if repeat is None else bool(repeat))
+        return self.status()
+
+    def browse_game(self, channel):
+        """Windows file dialog for StarCitizen.exe; the pick is used for that channel."""
+        import webview
+        start = ""
+        inst = next((i for i in self._core.installs if i.channel == str(channel).upper()), None)
+        if inst:
+            start = str(inst.exe.parent)
+        picked = self._window.create_file_dialog(webview.OPEN_DIALOG, directory=start, allow_multiple=False,
+                                                 file_types=("Programs (*.exe)",))
+        if picked:
+            path = picked[0] if isinstance(picked, (list, tuple)) else picked
+            self._path_error = self._core.set_game_path(str(channel), str(path))
+        return self.status()
+
+    def reset_game_path(self, channel):
+        self._path_error = self._core.set_game_path(str(channel), None)
         return self.status()
 
     def set_pref(self, key, value):
@@ -104,8 +126,11 @@ def run_window(updated_from: str | None = None, autostart: bool = False) -> int:
 
     # Served by pywebview's local http server, so the page can load music.mp3 next to it.
     page = str(resource("ui", "index.html"))
-    window = webview.create_window("7Hills Link", url=page, js_api=JsApi(core, autostart), width=980, height=720,
+    js_api = JsApi(core, autostart)
+    window = webview.create_window("7Hills Link", url=page, js_api=js_api, width=980, height=720,
                                    min_size=(760, 560), background_color="#0D0D0D", hidden=autostart)
+
+    js_api._window = window
 
     from .tray import Tray
 
