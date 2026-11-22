@@ -47,6 +47,11 @@ class GameStream:
     def stop(self) -> None:
         self._stop.set()
 
+    def pending(self, since: float) -> tuple[bool, bool]:
+        """(a frame newer than `since` arrived, game events are waiting), without taking them."""
+        with self._lock:
+            return self._frame_at > since, bool(self._events)
+
     def take(self) -> tuple[dict | None, float, list[str]]:
         """Latest frame, when it arrived, and the game events seen since the last take."""
         with self._lock:
