@@ -270,7 +270,14 @@
   function saveVolume(v) { call('set_sound', null, v / 100) }
   function togglePlay() { if (music.paused) music.play().catch(() => {}); else music.pause() }
   function stopMusic() { music.pause(); music.currentTime = 0; paintMusic() }
-  function toggleMute() { call('set_sound', !(S && S.sound && S.sound.muted), null) }
+  // Mute stops the music right away (not only silences it) and is remembered across restarts.
+  function toggleMute() {
+    const muting = !(S && S.sound && S.sound.muted)
+    music.muted = muting
+    if (muting) music.pause()
+    paintMusic()
+    call('set_sound', muting, null)
+  }
 
   // ------------------------------------------------------------ settings view
   function toggleSettings(section) {
@@ -324,6 +331,7 @@
     S = s
     const snd = s.sound || {}
     music.muted = !!snd.muted
+    if (snd.muted && !music.paused) music.pause()   // also when muted from the tray menu
     if (document.activeElement !== $('sndVol')) { $('sndVol').value = Math.round((snd.volume ?? 0.1) * 100); setVolume($('sndVol').value) }
     if (first && !musicStarted) {
       musicStarted = true
