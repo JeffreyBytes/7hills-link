@@ -28,6 +28,7 @@ COMMON_ROOTS = [
 class Install:
     channel: str
     folder: Path          # ...\StarCitizen\PTU
+    source: str = "auto"  # auto (found by itself) | chosen (picked by the player)
 
     @property
     def exe(self) -> Path:
@@ -38,7 +39,7 @@ class Install:
         return self.folder / "user.cfg"
 
     def as_dict(self) -> dict:
-        return {"channel": self.channel, "folder": str(self.folder)}
+        return {"channel": self.channel, "folder": str(self.folder), "exe": str(self.exe), "source": self.source}
 
 
 def _channel_dir_from_exe(exe: Path) -> Path | None:
@@ -129,6 +130,28 @@ def find_installs(extra_roots: list[Path] | None = None) -> list[Install]:
         except OSError:
             continue
     return out
+
+
+def install_from_exe(path: str | Path) -> Install | None:
+    """An install from a StarCitizen.exe the player picked; the channel is its folder name."""
+    exe = Path(path)
+    d = _channel_dir_from_exe(exe)
+    if d is None or not exe.is_file():
+        return None
+    return Install(d.name.upper(), d, "chosen")
+
+
+def apply_choices(found: list[Install], chosen: dict[str, str]) -> list[Install]:
+    """One install per channel. A path the player picked wins over what was found."""
+    out: dict[str, Install] = {}
+    for inst in found:
+        out.setdefault(inst.channel, inst)
+    for ch, exe in chosen.items():
+        inst = install_from_exe(exe)
+        if inst and inst.channel == ch:
+            out[ch] = inst
+    order = {c: i for i, c in enumerate(CHANNELS)}
+    return sorted(out.values(), key=lambda i: (order.get(i.channel, 99), i.channel))
 
 
 def running_channel() -> str | None:

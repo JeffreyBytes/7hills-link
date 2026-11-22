@@ -103,7 +103,7 @@ def test_sound_and_prefs_survive_restart(tmp_path, monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     from sevenhills_link import core as core_mod
     c = core_mod.Core()
-    assert c.status()["sound"] == {"muted": False, "volume": 0.6}
+    assert c.status()["sound"] == {"muted": False, "volume": 0.1, "repeat": False}
     assert c.status()["prefs"] == {"start_with_windows": True, "tray": True, "play_on_start": True}
     c.prefs.set("play_on_start", False)
     c.prefs.set("start_with_windows", False)          # no registry outside the packaged exe
@@ -111,3 +111,18 @@ def test_sound_and_prefs_survive_restart(tmp_path, monkeypatch):
     c2 = core_mod.Core()
     assert c2.sound_muted and c2.sound_volume == 1.0
     assert c2.prefs.as_dict() == {"start_with_windows": False, "tray": True, "play_on_start": False}
+
+
+def test_chosen_game_path_wins(tmp_path, monkeypatch):
+    from sevenhills_link import detect
+    def mk(root, ch):
+        exe = tmp_path / root / ch / "Bin64" / "StarCitizen.exe"
+        exe.parent.mkdir(parents=True); exe.write_bytes(b"x"); return exe
+    auto = detect.Install("PTU", mk("a", "PTU").parent.parent)
+    picked = mk("b", "PTU")
+    live = detect.Install("LIVE", mk("a", "LIVE").parent.parent)
+    out = detect.apply_choices([auto, live], {"PTU": str(picked)})
+    assert [i.channel for i in out] == ["LIVE", "PTU"]
+    assert out[1].source == "chosen" and out[1].exe == picked
+    assert detect.install_from_exe(tmp_path / "nope.exe") is None
+    assert detect.apply_choices([auto], {"PTU": str(tmp_path / "gone.exe")})[0].source == "auto"

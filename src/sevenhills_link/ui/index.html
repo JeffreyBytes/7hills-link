@@ -79,6 +79,14 @@
   .srow { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--line); }
   .srow:first-of-type { border-top: 0; padding-top: 4px; }
   .switch:disabled { cursor: default; opacity: .4; }
+  .chrow { display: grid; grid-template-columns: 20px 190px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .chrow:first-child { border-top: 0; }
+  .radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #444; background: transparent; padding: 0; cursor: pointer; }
+  .radio.on { border-color: var(--gold); background: radial-gradient(var(--gold) 40%, transparent 45%); }
+  .radio:disabled { cursor: default; opacity: .35; }
+  .tag { white-space: nowrap; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
+  .tag.auto { background: rgba(74,222,128,.12); color: var(--ok); } .tag.chosen { background: rgba(240,180,67,.14); color: var(--gold); } .tag.miss { background: rgba(248,113,113,.12); color: var(--crit); }
+  .path { font: 11px "JetBrains Mono", Consolas, monospace; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
 </style>
 </head>
 <body>
@@ -163,13 +171,14 @@
       <div class="card row" style="padding:12px 16px">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F0B443" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
         <span style="font-weight:600">Peacekeepers</span>
-        <span class="dim mono" style="font-size:12px" id="sndTime">0:00 / 0:00</span>
+        <span class="dim mono" style="font-size:12px;white-space:nowrap" id="sndTime">0:00 / 0:00</span>
         <span class="grow"></span>
         <button class="icon-btn" id="sndMute" onclick="toggleMute()" aria-label="Mute"></button>
         <input type="range" id="sndVol" min="0" max="100" step="1" style="width:130px;accent-color:var(--gold)" oninput="setVolume(this.value)" onchange="call('set_sound', null, this.value/100)">
         <span class="dim" style="font-size:12px;min-width:34px" id="sndPct"></span>
         <button class="icon-btn" id="sndPlay" onclick="togglePlay()" aria-label="Play"></button>
         <button class="icon-btn" onclick="stopMusic()" aria-label="Stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
+        <button class="icon-btn" id="sndRepeat" onclick="call('set_sound', null, null, !(S && S.sound && S.sound.repeat))" aria-label="Repeat" title="Repeat"><svg viewBox="0 0 24 24"><path d="M4 12V9a3 3 0 0 1 3-3h13l-3-3M20 12v3a3 3 0 0 1-3 3H4l3 3"/></svg></button>
       </div>
       <audio id="music" src="music.mp3" preload="auto"></audio>
 
@@ -208,7 +217,10 @@
 
       <div class="card" id="secGame">
         <span class="label">Game</span>
-        <div class="srow"><div class="grow"><div>Game channel</div><div class="dim" style="font-size:12px" id="chHint">Which install to read from</div></div><div class="chips" id="channels"></div></div>
+        <p class="dim" style="font-size:12px;margin:6px 0 4px">Found by itself where possible. Press Browse and pick StarCitizen.exe if a channel is missing or wrong. The dot marks the channel to read from.</p>
+        <div id="channels"></div>
+        <p class="err" id="pathErr" style="margin:6px 0 0"></p>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn outline small" onclick="call('rescan')">Scan again</button></div>
       </div>
 
       <div class="card" id="secUpdates">
@@ -260,6 +272,9 @@
     $('sndMute').setAttribute('aria-label', snd.muted ? 'Unmute' : 'Mute')
     $('sndVol').style.opacity = snd.muted ? .45 : 1
     $('sndTime').textContent = fmt(music.currentTime) + ' / ' + fmt(music.duration)
+    music.loop = !!snd.repeat
+    $('sndRepeat').classList.toggle('on', !!snd.repeat)
+    $('sndRepeat').setAttribute('aria-pressed', snd.repeat ? 'true' : 'false')
   }
   ;['play', 'pause', 'ended', 'timeupdate', 'loadedmetadata'].forEach(e => music.addEventListener(e, paintMusic))
   function setVolume(v) { music.volume = v / 100; $('sndPct').textContent = Math.round(v) + '%' }
@@ -277,6 +292,8 @@
     document.querySelectorAll('.settings nav button[data-sec]').forEach(b => b.classList.toggle('on', b === btn))
     $(btn.dataset.sec).scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+  let chanHtmlLock = false
+  async function browseGame(ch) { chanHtmlLock = true; try { const st = await api('browse_game', ch); chanHtmlLock = false; if (st) render(st) } finally { chanHtmlLock = false } }
   function togglePref(key) { call('set_pref', key, !(S && S.prefs && S.prefs[key])) }
   const setSwitch = (id, on) => $(id).classList.toggle('on', !!on)
   async function checkNow() { $('checkBtn').disabled = true; $('updInfo').textContent = 'Checking…'; try { await call('check_updates') } finally { $('checkBtn').disabled = false } }
@@ -299,7 +316,7 @@
     S = s
     const snd = s.sound || {}
     music.muted = !!snd.muted
-    if (document.activeElement !== $('sndVol')) { $('sndVol').value = Math.round((snd.volume ?? 0.6) * 100); setVolume($('sndVol').value) }
+    if (document.activeElement !== $('sndVol')) { $('sndVol').value = Math.round((snd.volume ?? 0.1) * 100); setVolume($('sndVol').value) }
     if (first && !musicStarted) {
       musicStarted = true
       if (s.prefs && s.prefs.play_on_start && !snd.muted && !s.autostarted) music.play().catch(() => {})
@@ -359,7 +376,18 @@
     setSwitch('prefAuto', u.auto)
     const ago = s.update_checked_ago
     if (!$('checkBtn').disabled) $('updInfo').textContent = 'v' + s.version + upText + (ago !== null && ago !== undefined ? ' · checked ' + (ago < 60 ? 'just now' : Math.round(ago / 60) + ' min ago') : '')
-    $('channels').innerHTML = s.installs.map(i => '<button class="chip' + (i.channel === s.channel ? ' on' : '') + '" onclick="call(\'set_channel\',\'' + esc(i.channel) + '\')">' + esc(i.channel) + '</button>').join('') || '<span class="dim">none</span>'
+    const byCh = {}; (s.installs || []).forEach(i => { byCh[i.channel] = i })
+    const chans = (s.channels_known || []).concat(Object.keys(byCh).filter(c => !(s.channels_known || []).includes(c)))
+    if (!chanHtmlLock) $('channels').innerHTML = chans.map(c => {
+      const i = byCh[c], on = i && c === s.channel
+      const tag = !i ? '<span class="tag miss">not found</span>' : i.source === 'chosen' ? '<span class="tag chosen">chosen</span>' : '<span class="tag auto">found</span>'
+      const q = '\'' + esc(c) + '\''
+      return '<div class="chrow"><button class="radio' + (on ? ' on' : '') + '"' + (i ? '' : ' disabled') + ' aria-label="Read from ' + esc(c) + '" onclick="call(\'set_channel\',' + q + ')"></button>' +
+        '<div>' + esc(c) + tag + '</div><div class="path" title="' + esc(i ? i.exe : '') + '">' + (i ? '&lrm;' + esc(i.exe) : '—') + '</div>' +
+        '<div style="display:flex;gap:6px"><button class="btn outline small" onclick="browseGame(' + q + ')">Browse</button>' +
+        (i && i.source === 'chosen' ? '<button class="btn outline small" style="color:var(--dim);border-color:var(--line)" onclick="call(\'reset_game_path\',' + q + ')">Reset</button>' : '') + '</div></div>'
+    }).join('')
+    $('pathErr').textContent = s.path_error || ''
     $('acctText').textContent = s.linked ? 'Linked as ' + (name || 'this PC') : 'Not linked'
     show('unlinkBtn', s.linked)
   }

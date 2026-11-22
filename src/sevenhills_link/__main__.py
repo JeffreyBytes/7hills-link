@@ -4,6 +4,7 @@
   --headless           run without a window, log status to the console
   --updated <version>  (used by the updater) started by the previous version after an update
   --autostart          (used by the Windows Run entry) start hidden in the tray, no music
+  --install-to <exe> --wait <pids> --from-version <v>   (used by the updater) put this exe in place of <exe>
   --version
 """
 
@@ -20,6 +21,15 @@ def main(argv: list[str] | None = None) -> int:
     if "--version" in argv:
         print(__version__)
         return 0
+
+    if "--install-to" in argv:
+        from . import updater
+
+        def arg(flag, default=""):
+            i = argv.index(flag) if flag in argv else -1
+            return argv[i + 1] if 0 <= i < len(argv) - 1 else default
+        pids = [int(p) for p in arg("--wait").split(",") if p.strip().isdigit()]
+        return updater.install_to(Path(arg("--install-to")), pids, arg("--from-version", "?"))
 
     if "--write-cfg" in argv:
         from . import gamecfg

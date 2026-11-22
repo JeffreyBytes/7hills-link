@@ -123,6 +123,13 @@ class Core:
         self.link: dict | None = None
         self.updates = Updates(self)
         self.prefs = Prefs()
+        # StarCitizen.exe per channel, picked by the player with Browse; wins over what scan finds.
+        self.game_path_file = data_dir() / "game.json"
+        try:
+            gp = json.loads(self.game_path_file.read_text(encoding="utf-8")).get("paths") or {}
+        except (OSError, ValueError, AttributeError):
+            gp = {}
+        self.game_paths: dict[str, str] = {str(k): str(v) for k, v in gp.items()} if isinstance(gp, dict) else {}
         # Music: mute and volume, remembered across restarts. The window plays it.
         self.sound_path = data_dir() / "sound.json"
         try:
@@ -130,8 +137,9 @@ class Core:
         except (OSError, ValueError):
             snd = {}
         self.sound_muted = bool(snd.get("muted", False))
-        v = snd.get("volume", 0.6)
-        self.sound_volume = min(1.0, max(0.0, float(v))) if isinstance(v, (int, float)) else 0.6
+        v = snd.get("volume", 0.1)
+        self.sound_volume = min(1.0, max(0.0, float(v))) if isinstance(v, (int, float)) else 0.1
+        self.sound_repeat = bool(snd.get("repeat", False))
         self.link_error: str | None = None
         self.member: dict | None = None
         self.settings: dict | None = None
@@ -144,7 +152,7 @@ class Core:
     # ---------------------------------------------------------------- setup
 
     def scan(self) -> None:
-        installs = detect.find_installs()
+        installs = detect.apply_choices(detect.find_installs(), self.game_paths)
         running = detect.running_channel()
         with self.lock:
             self.installs = installs
@@ -155,6 +163,29 @@ class Core:
                 self.channel = "LIVE" if "LIVE" in names else (names[0] if names else None)
             self.cfg_state = {i.channel: {"missing": gamecfg.missing(i.user_cfg), "path": str(i.user_cfg)} for i in installs}
             self.env_ok = gamecfg.env_enabled()
+
+    def set_game_path(self, channel: str, exe: str | None) -> str | None:
+        """Pick (or with None, forget) StarCitizen.exe for a channel. Returns an error text or None."""
+        channel = str(channel).upper()
+        if exe:
+            inst = detect.install_from_exe(exe)
+            if inst is None:
+                return "Pick StarCitizen.exe inside a Bin64 folder"
+            if inst.channel != channel:
+                return f"That exe is in the {inst.channel} folder, not {channel}"
+            self.game_paths[channel] = str(inst.exe)
+        else:
+            self.game_paths.pop(channel, None)
+        try:
+            self.game_path_file.write_text(json.dumps({"paths": self.game_paths}), encoding="utf-8")
+        except OSError:
+            pass
+        self.scan()
+        with self.lock:
+            if exe:
+                self.channel = channel
+            self._restart_stream()
+        return None
 
     def current(self) -> detect.Install | None:
         return next((i for i in self.installs if i.channel == self.channel), None)
@@ -329,13 +360,15 @@ class Core:
 
     # ---------------------------------------------------------------- sound
 
-    def set_sound(self, muted: bool | None = None, volume: float | None = None) -> dict:
+    def set_sound(self, muted: bool | None = None, volume: float | None = None, repeat: bool | None = None) -> dict:
         if muted is not None:
             self.sound_muted = bool(muted)
+        if repeat is not None:
+            self.sound_repeat = bool(repeat)
         if isinstance(volume, (int, float)):
             self.sound_volume = min(1.0, max(0.0, float(volume)))
         try:
-            self.sound_path.write_text(json.dumps({"muted": self.sound_muted, "volume": round(self.sound_volume, 2)}), encoding="utf-8")
+            self.sound_path.write_text(json.dumps({"muted": self.sound_muted, "volume": round(self.sound_volume, 2), "repeat": self.sound_repeat}), encoding="utf-8")
         except OSError:
             pass
         return self.status()
@@ -358,7 +391,8 @@ class Core:
             return {
                 "version": __version__,
                 "update": self.updates.status(),
-                "sound": {"muted": self.sound_muted, "volume": self.sound_volume},
+                "sound": {"muted": self.sound_muted, "volume": self.sound_volume, "repeat": self.sound_repeat},
+                "channels_known": detect.CHANNELS,
                 "prefs": self.prefs.as_dict(),
                 "can_autostart": updater.can_install(),
                 "update_checked_ago": round(time.time() - self.updates.checked_at) if self.updates.checked_at else None,
