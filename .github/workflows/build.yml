@@ -43,12 +43,28 @@ jobs:
           --collect-submodules sevenhills_link
           --hidden-import keyring.backends.Windows
           --hidden-import pystray._win32
+          --hidden-import win32com.client
           run_client.py
       - name: Smoke test
         shell: pwsh
         run: |
           $v = & .\dist\7HillsLink.exe --version | Out-String
           Write-Host "version: $v"
+      - name: Single instance test
+        shell: pwsh
+        run: |
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'sitest'
+          New-Item -ItemType Directory -Force $env:LOCALAPPDATA | Out-Null
+          $first = Start-Process dist/7HillsLink.exe -ArgumentList '--autostart' -PassThru
+          Start-Sleep 12
+          $second = Start-Process dist/7HillsLink.exe -ArgumentList '--autostart' -PassThru
+          $second | Wait-Process -Timeout 30 -ErrorAction SilentlyContinue
+          $log = Get-Content "$env:LOCALAPPDATA\7HillsLink\link.log" -ErrorAction SilentlyContinue
+          $log
+          $ok = $second.HasExited -and -not $first.HasExited
+          Get-Process 7HillsLink -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $ok) { Write-Error 'second start did not exit while the first kept running'; exit 1 }
+          if (-not ($log -match 'already running')) { Write-Error 'no already-running line in link.log'; exit 1 }
       - name: Update install test
         shell: pwsh
         run: |

@@ -90,7 +90,23 @@
     <span class="grow"></span>
     <button class="ghost" onclick="api('open_dashboard')">Dashboard ↗</button>
     <button class="icon" id="gearBtn" onclick="toggleSettings()" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
+    <button class="icon" onclick="api('quit')" aria-label="Quit 7Hills Link" title="Quit 7Hills Link"><svg viewBox="0 0 24 24"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button>
   </header>
+
+  <div class="view hidden" id="installView">
+    <div class="sec" style="padding-top:34px;max-width:640px">
+      <div class="display" style="font-size:26px">Install 7Hills Link</div>
+      <p class="dim" style="font-size:13px;margin:6px 0 18px">You're running it from a folder of its own. Install it once so it can update itself and start with Windows.</p>
+      <div class="label">Installs to</div>
+      <div class="mono" style="font-size:12px;color:var(--mute);margin:4px 0 16px" id="instTarget"></div>
+      <label class="row" style="gap:10px;margin-bottom:8px;cursor:pointer"><input type="checkbox" id="instStart" checked style="accent-color:var(--gold)"> Start menu shortcut</label>
+      <label class="row" style="gap:10px;margin-bottom:8px;cursor:pointer"><input type="checkbox" id="instDesk" checked style="accent-color:var(--gold)"> Desktop shortcut</label>
+      <label class="row" style="gap:10px;margin-bottom:8px;cursor:pointer"><input type="checkbox" id="instRemove" checked style="accent-color:var(--gold)"> Remove this copy</label>
+      <p class="dim" style="font-size:12px;margin:14px 0 22px">No admin rights needed. You stay linked. Uninstall from Settings → Account.</p>
+      <p class="err" id="instErr"></p>
+      <div class="row"><button class="ghost" onclick="call('decline_install')">Run without installing</button><span class="grow"></span><button class="btn" id="instBtn" onclick="doInstall()">Install</button></div>
+    </div>
+  </div>
 
   <div class="view" id="mainView">
     <div class="notice gold hidden" id="updCard" style="margin:16px 34px 0">
@@ -202,6 +218,8 @@
 
     <div class="sec" id="secAccount">
       <div class="label" style="margin-bottom:6px">Account</div>
+      <div class="srow"><div class="grow"><div>Quit 7Hills Link</div><div class="dim" style="font-size:12px">Stops it completely. Closing the window only hides it in the tray.</div></div><button class="btn outline small" onclick="api('quit')">Quit</button></div>
+      <div class="srow hidden" id="uninstRow"><div class="grow"><div>Uninstall</div><div class="dim" style="font-size:12px">Removes the shortcuts and Start with Windows, quits, and opens the folder so you can delete it.</div></div><button class="btn outline small" style="color:var(--crit);border-color:rgba(226,75,74,.4)" onclick="if(confirm('Uninstall 7Hills Link from this PC?')) api('uninstall_app')">Uninstall</button></div>
       <div class="srow"><div class="grow" id="acctText">Not linked</div><button class="btn outline small hidden" id="unlinkBtn" style="color:var(--crit);border-color:rgba(226,75,74,.4)" onclick="if(confirm('Unlink this PC from 7Net?')) call('unlink')">Unlink this PC</button></div>
     </div>
   </div>
@@ -272,6 +290,13 @@
   function share(patch) { call('set_share', patch) }
   function modeOf(st) { return st ? (st.share_mode || (st.share_org ? 'full' : 'online')) : 'online' }
   function setMode(m) { if (modeOf(S && S.settings) !== m) share({ share_mode: m }) }
+  let installing = false
+  async function doInstall() {
+    installing = true; $('instBtn').disabled = true; $('instBtn').textContent = 'Installing…'
+    const st = await api('install_app', $('instStart').checked, $('instDesk').checked, $('instRemove').checked)
+    if (st && st.install && st.install.error) { installing = false; $('instBtn').disabled = false; $('instBtn').textContent = 'Install' }
+    if (st) render(st)
+  }
   function updAction() { const u = (S && S.update) || {}; if (u.state === 'error') checkNow(); else call('update_now') }
 
   // The data path: each step is green, or the first one that is not decides the headline.
@@ -312,6 +337,16 @@
     $('updText').textContent = failed ? 'Kept v' + s.version + '. ' + (u.error || '') + ' Details in update.log.' : u.state === 'installing' ? 'The window closes and the new version opens in a moment.' : 'Installs when you quit the game, or now. You stay linked.'
     $('updBtn').textContent = failed ? 'Try again' : 'Restart now'
     $('updBtn').disabled = u.state === 'installing'
+
+    // Install screen: shown instead of everything else until they install or decline.
+    const ins = s.install || {}
+    const instOn = !!ins.offer || installing
+    show('installView', instOn)
+    if (instOn) { show('mainView', false); show('settingsView', false) }
+    else if (!$('installView').dataset.done) { $('installView').dataset.done = '1'; show('mainView', true) }
+    $('instTarget').textContent = ins.target || ''
+    $('instErr').textContent = ins.error || ''
+    show('uninstRow', !!ins.installed)
 
     const name = s.member ? s.member.handle : null
     $('ini').textContent = name ? name.slice(0, 2).toUpperCase() : '?'
