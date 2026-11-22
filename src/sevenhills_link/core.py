@@ -10,13 +10,15 @@ import threading
 import time
 import webbrowser
 
-from . import __version__, api, detect, gamecfg, protoset
+from . import __version__, api, detect, gamecfg, protoset, updater
+from .paths import data_dir
 from .stream import GameStream
 
 MIN_GAP = 0.25          # at most 4 uploads a second; sent as soon as something changes
 TICK = 0.05             # how often the loop looks for news
 HEARTBEAT = 15.0        # upload at least this often while connected, even if nothing new
 SETTINGS_EVERY = 30.0   # refresh sharing settings from 7Net
+UPDATE_EVERY = 6 * 3600 # look for a new release
 
 
 def _summary(frame: dict | None) -> dict:
@@ -39,6 +41,71 @@ def _summary(frame: dict | None) -> dict:
     return out
 
 
+class Updates:
+    """Looks for new releases, downloads them, and installs when allowed."""
+
+    def __init__(self, core: "Core") -> None:
+        self.core = core
+        self.path = data_dir() / "update.json"
+        try:
+            self.auto = bool(json.loads(self.path.read_text(encoding="utf-8")).get("auto_install", True))
+        except (OSError, ValueError):
+            self.auto = True
+        self.state = "idle"        # idle | checking | up_to_date | downloading | ready | installing | error
+        self.latest: str | None = None
+        self.file = None
+        self.error: str | None = None
+        self.checked_at = 0.0
+        self.install_hook = None   # set by the window: (Path) -> None, exits the app on success
+
+    def set_auto(self, on: bool) -> None:
+        self.auto = bool(on)
+        try:
+            self.path.write_text(json.dumps({"auto_install": self.auto}), encoding="utf-8")
+        except OSError:
+            pass
+
+    def check_now(self) -> None:
+        self.checked_at = time.time()
+        self.state, self.error = "checking", None
+        try:
+            info = updater.check()
+            if not info:
+                self.state = "up_to_date"
+                return
+            self.latest = info["version"]
+            self.state = "downloading"
+            self.file = updater.download(info)
+            self.state = "ready"
+        except Exception as e:
+            self.state, self.error = "error", str(e)[:200]
+
+    def tick(self) -> None:
+        if not updater.can_install():
+            self.state = "source"   # running from source: nothing to update
+            return
+        if time.time() - self.checked_at >= UPDATE_EVERY or (self.state == "error" and time.time() - self.checked_at >= 3600):
+            threading.Thread(target=self.check_now, name="update-check", daemon=True).start()
+            self.checked_at = time.time()
+        # Install by itself only between play sessions.
+        playing = bool(self.core.stream and self.core.stream.connected)
+        if self.state == "ready" and self.auto and not playing and self.core.link is None and updater.can_install():
+            self.install()
+
+    def install(self) -> None:
+        if self.state != "ready" or not self.file or not self.install_hook:
+            return
+        self.state = "installing"
+        try:
+            self.install_hook(self.file)
+        except Exception as e:
+            self.state, self.error = "error", str(e)[:200]
+
+    def status(self) -> dict:
+        return {"state": self.state, "latest": self.latest, "error": self.error, "auto": self.auto,
+                "can_install": updater.can_install()}
+
+
 class Core:
     def __init__(self) -> None:
         self.lock = threading.RLock()
@@ -53,6 +120,7 @@ class Core:
         self.token = api.load_token()
         self.linked = bool(self.token)
         self.link: dict | None = None
+        self.updates = Updates(self)
         self.link_error: str | None = None
         self.member: dict | None = None
         self.settings: dict | None = None
@@ -222,6 +290,7 @@ class Core:
                 self.ensure_stream()
                 last_scan = time.time()
             self.refresh_settings()
+            self.updates.tick()
             if not (self.token and self.stream) or now < backoff_until or now - last_try < MIN_GAP:
                 continue
             new_frame, has_events = self.stream.pending(last_sent_frame_at)
@@ -264,6 +333,7 @@ class Core:
                     frame = self.stream._frame
             return {
                 "version": __version__,
+                "update": self.updates.status(),
                 "installs": [i.as_dict() for i in self.installs],
                 "channel": self.channel,
                 "game_found": inst is not None,

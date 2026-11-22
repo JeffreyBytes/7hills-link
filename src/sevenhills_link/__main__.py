@@ -2,6 +2,7 @@
 
   --write-cfg <path>   (used by the client itself, elevated) add the telemetry lines to user.cfg
   --headless           run without a window, log status to the console
+  --updated <version>  (used by the updater) started by the previous version after an update
   --version
 """
 
@@ -43,8 +44,13 @@ def main(argv: list[str] | None = None) -> int:
             core.stop()
         return 0
 
+    updated_from = None
+    if "--updated" in argv:
+        i = argv.index("--updated")
+        updated_from = argv[i + 1] if i + 1 < len(argv) else "?"
+
     from .app import run_window
-    return run_window()
+    return run_window(updated_from)
 
 
 if __name__ == "__main__":
