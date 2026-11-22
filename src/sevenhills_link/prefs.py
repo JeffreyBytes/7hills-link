@@ -46,12 +46,48 @@ RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 RUN_NAME = "7HillsLink"
 
 
-def apply_startup(on: bool, exe=None) -> bool:
-    """Add or remove the per-user Run entry. Only for the packaged exe on Windows.
+def can_autostart() -> bool:
+    """Windows: the packaged exe (a Run entry). Linux: always (an XDG autostart entry)."""
+    return (sys.platform == "win32" and bool(getattr(sys, "frozen", False))) or sys.platform.startswith("linux")
 
-    The entry points at the exe's current path, so it follows the exe if the
-    user moves it (it is rewritten on every start).
+
+def _linux_autostart(on: bool) -> bool:
+    import os
+    from pathlib import Path
+    base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "autostart"
+    entry = base / "7hills-link.desktop"
+    if not on:
+        try:
+            entry.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            return False
+        return True
+    if getattr(sys, "frozen", False):
+        cmd = f'"{sys.executable}" --autostart'
+    else:
+        src = Path(__file__).resolve().parent.parent   # .../src, so the module is found from anywhere
+        cmd = f'env PYTHONPATH="{src}" "{sys.executable}" -m sevenhills_link --autostart'
+    try:
+        base.mkdir(parents=True, exist_ok=True)
+        entry.write_text("[Desktop Entry]\nType=Application\nName=7Hills Link\n"
+                         "Comment=Star Citizen telemetry for 7hills.space\n"
+                         f"Exec={cmd}\nX-GNOME-Autostart-enabled=true\nTerminal=false\n", encoding="utf-8")
+        return True
+    except OSError:
+        return False
+
+
+def apply_startup(on: bool, exe=None) -> bool:
+    """Add or remove start-on-login. Windows: the per-user Run entry for the
+    packaged exe. Linux: ~/.config/autostart/7hills-link.desktop.
+
+    The entry points at the current exe (or Python and the source folder), so
+    it follows the client if it moves (it is rewritten on every start).
     """
+    if sys.platform.startswith("linux"):
+        return _linux_autostart(on)
     if sys.platform != "win32" or not getattr(sys, "frozen", False):
         return False
     try:

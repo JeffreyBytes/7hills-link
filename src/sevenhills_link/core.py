@@ -14,7 +14,7 @@ import webbrowser
 
 from . import __version__, api, detect, gamecfg, protoset, updater
 from .paths import data_dir
-from .prefs import Prefs
+from .prefs import Prefs, can_autostart
 from .stream import GameStream
 
 MIN_GAP = 0.25          # at most 4 uploads a second; sent as soon as something changes
@@ -427,7 +427,8 @@ class Core:
                 "prefs": self.prefs.as_dict(),
                 "traffic": self.traffic_rate(),
                 "delay": {"wait": _r3(self.delay_wait), "upload": _r3(self.delay_upload)},
-                "can_autostart": updater.can_install(),
+                "can_autostart": can_autostart(),
+                "platform": sys.platform,
                 "update_checked_ago": round(time.time() - self.updates.checked_at) if self.updates.checked_at else None,
                 "installs": [i.as_dict() for i in self.installs],
                 "channel": self.channel,

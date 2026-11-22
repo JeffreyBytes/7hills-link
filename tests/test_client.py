@@ -101,6 +101,7 @@ def test_uploads_on_change_at_most_4_per_second(tmp_path, monkeypatch):
 
 def test_sound_and_prefs_survive_restart(tmp_path, monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
     from sevenhills_link import core as core_mod
     c = core_mod.Core()
     assert c.status()["sound"] == {"muted": False, "volume": 0.1, "repeat": False}
@@ -128,10 +129,9 @@ def test_chosen_game_path_wins(tmp_path, monkeypatch):
     assert detect.apply_choices([auto], {"PTU": str(tmp_path / "gone.exe")})[0].source == "auto"
 
 
-def test_single_instance_and_install_are_noops_off_windows(tmp_path, monkeypatch):
+def test_install_is_windows_only(tmp_path, monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
-    from sevenhills_link import install, instance
-    assert instance.acquire() is True and instance.signal_running() is False
+    from sevenhills_link import install
     assert install.needs_install(False) is False          # not the packaged Windows exe
     assert install.install(True, True, True, True) == "Installing works only in the packaged 7HillsLink.exe"
     assert install.install_dir() == tmp_path / "Programs" / "7HillsLink"
@@ -156,3 +156,38 @@ def test_log_writes_uncaught_errors(tmp_path, monkeypatch):
         sys.excepthook = old
         for h in list(logmod.log.handlers):
             h.close(); logmod.log.removeHandler(h)
+
+
+def test_linux_single_instance_and_show_request(tmp_path, monkeypatch):
+    import subprocess, sys, textwrap, time
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    from sevenhills_link import instance
+    assert instance.acquire() is True
+    # A second process cannot take the lock while this one holds it, and can ask for the window.
+    code = textwrap.dedent("""
+        import sys
+        from sevenhills_link import instance
+        print(instance.acquire(), instance.signal_running())
+    """)
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                         env={"LOCALAPPDATA": str(tmp_path), "PYTHONPATH": "src"}).stdout.split()
+    assert out == ["False", "True"]
+    shown = []
+    instance.listen(lambda: shown.append(1))
+    instance.signal_running()
+    for _ in range(20):
+        if shown:
+            break
+        time.sleep(0.1)
+    assert shown
+
+
+def test_linux_autostart_entry(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    from sevenhills_link import prefs
+    assert prefs.can_autostart() is True
+    assert prefs.apply_startup(True) is True
+    entry = (tmp_path / "autostart" / "7hills-link.desktop").read_text()
+    assert "-m sevenhills_link --autostart" in entry and "PYTHONPATH=" in entry
+    assert prefs.apply_startup(False) is True
+    assert not (tmp_path / "autostart" / "7hills-link.desktop").exists()
