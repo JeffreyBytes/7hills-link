@@ -15,13 +15,13 @@ Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star 
    ```
 3. **Reads the API definitions from your installed `StarCitizen.exe`**, so it keeps working after patches.
 4. **Links this PC to your 7Net account**: shows a code, opens 7hills.space/link, you press *Connect this PC*. The key is stored in Windows Credential Manager.
-5. **Streams** from the game's local server (`127.0.0.1:50051`, never exposed to the network) and sends the state to 7Net as soon as it changes (at most four times a second).
+5. **Streams** from the game's local server (`127.0.0.1`, the `user.cfg` port or 2942, never exposed to the network) and sends the state to 7Net as soon as it changes (at most four times a second).
 7. **Installs itself** on first start to `%LOCALAPPDATA%\Programs\7HillsLink` (no admin rights) with Start menu and desktop shortcuts, and runs **one copy at a time**: starting it again shows the window of the one that runs. Quit with the power button in the window or from the tray. Its log is `%LOCALAPPDATA%\7HillsLink\link.log` (native crashes in `crash.log`).
 6. **Runs in the tray**: minimizing or closing hides the window behind a gold 7 in the notification area; quit from its menu. It starts with Windows (hidden, no music) unless you switch that off under Settings.
 
 ## Linux (Wine / Proton)
 
-The client runs natively on Linux from source (see *Run from source*; use `export PYTHONPATH=src`). The game's telemetry server listens on the host's `127.0.0.1:50051` through Wine, so the native client can reach it.
+The client runs natively on Linux from source (see *Run from source*; use `export PYTHONPATH=src`). The game's telemetry server listens on the host's loopback through Wine, so the native client can reach it. Tested on CachyOS (KDE Plasma, Wayland) with a LUG helper prefix on 4.x LIVE.
 
 - **Finding the game:** it looks inside the usual prefixes (`$WINEPREFIX`, `~/Games/star-citizen` from the LUG helper, other `~/Games/*` Lutris prefixes, Steam/Proton `compatdata/*/pfx`, `~/.wine`), reads the RSI Launcher's files inside them, and maps the running `StarCitizen.exe` back to its folder. If it misses yours, point it there:
   ```
@@ -31,9 +31,10 @@ The client runs natively on Linux from source (see *Run from source*; use `expor
   ```
   Either takes the Wine prefix, the `StarCitizen` folder, a channel folder (`.../StarCitizen/PTU`) or `StarCitizen.exe` itself. `--game-dir` can be repeated; separate several folders in the variable with `:`.
 - **`user.cfg`:** *Switch on* writes the three lines as on Windows. No admin prompt is needed, the prefix is yours.
+- **Port:** 4.x LIVE ignores `grpc.client.server.port` and always serves on `2942`; the client tries the `user.cfg` port first and then 2942, and stays on whichever answers. To force one: `--port 2942` or `SEVENHILLS_SC_PORT=2942`.
 - **`GRPC_CLIENT_SERVER_ENABLED`:** must be in the game's launch environment; the client cannot set it for you. Add `export GRPC_CLIENT_SERVER_ENABLED=true` to your launch script, or set it under Lutris → Configure → System options → Environment variables, or use Steam launch options `GRPC_CLIENT_SERVER_ENABLED=true %command%`. The client checks the running game's environment and shows a hint until it sees the variable there.
-- **One copy, tray and autostart:** as on Windows it runs one copy at a time (a lock file; a second start shows the running window). *Start when you log in* writes `~/.config/autostart/7hills-link.desktop`. The tray icon needs an AppIndicator/StatusNotifier host (most desktops; GNOME needs the AppIndicator extension); without one, minimizing does not hide the window. Updates are not installed automatically when running from source; `git pull` instead.
-- Not verified yet: whether the telemetry server starts under Wine/Proton at all. Check with `ss -ltnp | grep 50051` while in game, and report in [issue #1](https://github.com/TheBanjolorian/7hills-link/issues/1).
+- **One copy, tray and autostart:** as on Windows it runs one copy at a time (a lock file; a second start shows the running window). *Start when you log in* writes `~/.config/autostart/7hills-link.desktop`. The tray icon needs PyGObject (in `requirements.txt`; first install your distro's `gobject-introspection`, `cairo` and `libayatana-appindicator` packages) and an AppIndicator/StatusNotifier host (most desktops; GNOME needs the AppIndicator extension). Without PyGObject pystray falls back to X11, where the icon can't be clicked under KDE Wayland, so the window is then never hidden to the tray. Updates are not installed automatically when running from source; `git pull` instead.
+- Check what the game listens on with `ss -ltnp | grep -E '2942|50051'` while in game. Report problems in [issue #1](https://github.com/TheBanjolorian/7hills-link/issues/1).
 
 ## What the game's telemetry offers
 
@@ -52,8 +53,8 @@ From v0.4.0 the client checks this repository's latest release at start and ever
 ## Run from source
 
 ```
-pip install -r requirements.txt
-set PYTHONPATH=src
+pip install -r requirements.txt        # Linux: also "pywebview[qt]"
+set PYTHONPATH=src                     # Linux/macOS: export PYTHONPATH=src
 python -m sevenhills_link            # window
 python -m sevenhills_link --headless
 ```

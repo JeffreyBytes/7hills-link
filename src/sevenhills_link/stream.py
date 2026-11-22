@@ -21,15 +21,20 @@ def to_dict(msg) -> dict:
 
 
 class GameStream:
-    """Background thread: connect to 127.0.0.1:<port>, keep the newest frame, reconnect on loss."""
+    """Background thread: connect to 127.0.0.1:<port>, keep the newest frame, reconnect on loss.
 
-    def __init__(self, fds, port: int):
+    With several ports it tries them in turn until one streams, then stays on that one
+    (the game may not use the port in user.cfg; 4.x LIVE always serves on 2942).
+    """
+
+    def __init__(self, fds, port: int | list[int]):
         pool = descriptor_pool.DescriptorPool()
         for f in fds.file:
             pool.Add(f)
         self._req = message_factory.GetMessageClass(pool.FindMessageTypeByName("sc.game.telemetry.v1.TelemetryStreamRequest"))
         self._resp = message_factory.GetMessageClass(pool.FindMessageTypeByName("sc.game.telemetry.v1.TelemetryStreamResponse"))
-        self.port = port
+        self.ports = [port] if isinstance(port, int) else list(port) or [0]
+        self.port = self.ports[0]
         self._lock = threading.Lock()
         self._frame: dict | None = None
         self._frame_at = 0.0
@@ -60,6 +65,7 @@ class GameStream:
 
     def _run(self) -> None:
         while not self._stop.is_set():
+            got_frame = False
             channel = grpc.insecure_channel(f"127.0.0.1:{self.port}")
             try:
                 call = channel.unary_stream(METHOD, request_serializer=lambda m: m.SerializeToString(), response_deserializer=self._resp.FromString)
@@ -74,6 +80,7 @@ class GameStream:
                         self._events.extend(events[:20])
                         del self._events[:-100]
                     self.connected, self.error = True, None
+                    got_frame = True
                     self.frames += 1
                     window_n += 1
                     if time.time() - window_start >= 2:
@@ -86,4 +93,10 @@ class GameStream:
             finally:
                 self.connected, self.fps = False, 0.0
                 channel.close()
+            if not got_frame and len(self.ports) > 1 and not self._stop.is_set():
+                # Nothing here: try the next port right away, wait only after a full round.
+                i = (self.ports.index(self.port) + 1) % len(self.ports)
+                self.port = self.ports[i]
+                if i != 0:
+                    continue
             self._stop.wait(3)

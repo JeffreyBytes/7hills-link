@@ -255,7 +255,7 @@ class Core:
         except Exception as e:
             self.proto_error = str(e)[:200]
             return
-        self.stream = GameStream(fds, gamecfg.port_of(inst.user_cfg))
+        self.stream = GameStream(fds, gamecfg.ports_for(inst.user_cfg))
         self.stream.start()
         self.stream_exe = str(inst.exe)
 
