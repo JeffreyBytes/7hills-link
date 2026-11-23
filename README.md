@@ -4,6 +4,8 @@ Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star 
 
 **Download:** [7HillsLink.exe](https://github.com/TheBanjolorian/7hills-link/releases/latest/download/7HillsLink.exe) (Windows 10/11). The exe is not code-signed yet, so Windows SmartScreen asks once: *More info → Run anyway*.
 
+**Linux:** runs natively from source with the game in Wine/Proton (LUG helper, Lutris, Steam). Tested on LIVE with KDE Plasma on Wayland. See [Linux (Wine / Proton)](#linux-wine--proton).
+
 ## What it does
 
 1. **Finds Star Citizen** (running game, RSI Launcher files, common install folders) — LIVE, PTU and the other channels. If it misses one, pick `StarCitizen.exe` for that channel under Settings → Game.

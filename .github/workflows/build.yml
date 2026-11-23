@@ -108,6 +108,7 @@ jobs:
           body: |
             Windows SmartScreen asks once because the exe is not signed yet: More info → Run anyway.
             Download: https://github.com/TheBanjolorian/7hills-link/releases/latest/download/7HillsLink.exe
+            Linux (Wine/Proton): run from source, see https://github.com/TheBanjolorian/7hills-link#linux-wine--proton
           files: |
             dist/7HillsLink.exe
             dist/7HillsLink.exe.sha256
