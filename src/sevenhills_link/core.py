@@ -12,7 +12,7 @@ import time
 from collections import deque
 import webbrowser
 
-from . import __version__, api, detect, gamecfg, location, protoset, updater
+from . import __version__, api, detect, gamecfg, location, protoset, situation, updater
 from .paths import data_dir
 from .prefs import Prefs, can_autostart
 from .stream import GameStream
@@ -189,6 +189,8 @@ class Core:
         # Where the player is, from Game.log next to the game's exe (see location.py).
         self.tracker = location.Tracker(location.Places.load())
         self.gamelog: location.GameLogFollower | None = None
+        # What the player is doing there, from the telemetry (see situation.py).
+        self.steady = situation.Steady()
 
     # ---------------------------------------------------------------- setup
 
@@ -414,6 +416,9 @@ class Core:
             heartbeat = self.stream.connected and now - self.last_upload >= HEARTBEAT
             # The place from Game.log: sent when it changed (or cleared), and once a minute.
             loc = self.tracker.snapshot()
+            state = self.steady.feed(situation.state_of(self._peek_frame()), now) if self.stream.connected else None
+            if loc:
+                loc["state"] = state
             loc_json = json.dumps(loc, sort_keys=True) if loc else ""
             loc_due = self.stream.connected and (loc_json != last_loc_json or (bool(loc) and now - last_loc_sent >= LOC_REFRESH))
             if not (new_frame or has_events or heartbeat or loc_due):
@@ -485,14 +490,26 @@ class Core:
 
     # ---------------------------------------------------------------- status for the window
 
+    def _peek_frame(self) -> dict | None:
+        """The latest telemetry frame, without draining the game events."""
+        return self.stream.peek() if self.stream else None
+
+    def _situation(self, frame: dict | None) -> str | None:
+        """Place (Game.log) + state (telemetry) as one line for the window."""
+        snap = self.tracker.snapshot()
+        if not snap:
+            return None
+        place = self.tracker.places.by_id.get(snap["place_id"]) or {}
+        name = place.get("name")
+        if name and place.get("station"):
+            name = f"{name} · {place['station']}"
+        return situation.describe(self.steady.state, snap["confidence"], name, situation.altitude_of(frame))
+
     def status(self) -> dict:
         with self.lock:
             inst = self.current()
             cfg = self.cfg_state.get(self.channel or "", {})
-            frame = None
-            if self.stream:
-                with self.stream._lock:  # read without draining events
-                    frame = self.stream._frame
+            frame = self._peek_frame()
             return {
                 "version": __version__,
                 "update": self.updates.status(),
@@ -528,5 +545,6 @@ class Core:
                 "upload_error": self.upload_error,
                 "now": _summary(frame),
                 "where": self.tracker.describe(),
+                "situation": self._situation(frame),
                 "gamelog_error": self.gamelog.error if self.gamelog else None,
             }

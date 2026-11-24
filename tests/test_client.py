@@ -68,6 +68,8 @@ def test_uploads_on_change_at_most_4_per_second(tmp_path, monkeypatch):
             self.lock = threading.Lock(); self.frame = {"n": 0}; self.at = time.time(); self.events = []
         def pending(self, since):
             with self.lock: return self.at > since, bool(self.events)
+        def peek(self):
+            with self.lock: return dict(self.frame)
         def take(self):
             with self.lock:
                 ev, self.events = self.events, []
