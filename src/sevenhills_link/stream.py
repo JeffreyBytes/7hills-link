@@ -57,6 +57,11 @@ class GameStream:
         with self._lock:
             return self._frame_at > since, bool(self._events)
 
+    def peek(self) -> dict | None:
+        """The latest frame, leaving the game events where they are."""
+        with self._lock:
+            return self._frame
+
     def take(self) -> tuple[dict | None, float, list[str]]:
         """Latest frame, when it arrived, and the game events seen since the last take."""
         with self._lock:
