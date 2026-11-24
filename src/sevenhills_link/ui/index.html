@@ -372,7 +372,7 @@
     $('headBub').className = 'bub big ' + p.head.color
     const n = s.now || {}
     const where = n.ship ? n.ship + (n.seat ? ', seated' : '') : n.locomotion === 'on_foot' ? 'On foot' : ''
-    $('subline').textContent = [name || (s.linked ? 'Linked' : 'Not linked'), where, s.game_found ? s.channel : ''].filter(Boolean).join(' · ')
+    $('subline').textContent = [name || (s.linked ? 'Linked' : 'Not linked'), where, s.where || '', s.game_found ? s.channel : ''].filter(Boolean).join(' · ')
     const extra = n.ship ? ['Gear ' + (n.gear || '?'), n.mode, n.power_on ? 'Power on' : 'Power off'].filter(Boolean).join(' · ') : ''
     $('steps').innerHTML = p.steps.map(st => '<span><span class="bub ' + st.color + '"></span>' + esc(st.name) + '</span>').join('') + (extra ? '<span style="margin-left:auto">' + esc(extra) + '</span>' : '')
 

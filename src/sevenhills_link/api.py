@@ -63,8 +63,15 @@ def poll_link(code: str, poll_secret: str) -> dict:
     return _call("POST", "/api/telemetry/link/poll", {"code": code, "poll_secret": poll_secret})
 
 
-def ingest(token: str, frame: dict | None, events: list[str]) -> dict:
-    return _call("POST", "/api/telemetry/ingest", {"client_version": __version__, "frame": frame, "events": events}, token=token)
+_UNSET = object()
+
+
+def ingest(token: str, frame: dict | None, events: list[str], location=_UNSET) -> dict:
+    """location: a place from Game.log (location.Tracker.snapshot), None to clear it, or left out."""
+    body = {"client_version": __version__, "frame": frame, "events": events}
+    if location is not _UNSET:
+        body["location"] = location
+    return _call("POST", "/api/telemetry/ingest", body, token=token)
 
 
 def get_settings(token: str) -> dict:

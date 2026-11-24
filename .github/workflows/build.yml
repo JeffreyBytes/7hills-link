@@ -40,6 +40,7 @@ jobs:
           --name 7HillsLink
           --paths src
           --add-data "src/sevenhills_link/ui;sevenhills_link/ui"
+          --add-data "src/sevenhills_link/data;sevenhills_link/data"
           --collect-submodules sevenhills_link
           --hidden-import keyring.backends.Windows
           --hidden-import pystray._win32
