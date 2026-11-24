@@ -31,7 +31,7 @@ if [ -n "$extra" ]; then
     exit 1
 fi
 
-mkdir -p "$APPDIR/usr/lib""$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+mkdir -p "$APPDIR/usr/lib" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp -a "$BUILD/pyinstaller-dist/7HillsLink" "$APPDIR/usr/lib/"
 install -m 755 "$HERE/AppRun" "$APPDIR/AppRun"
 cp "$HERE/7hills-link.desktop" "$APPDIR/7hills-link.desktop"
