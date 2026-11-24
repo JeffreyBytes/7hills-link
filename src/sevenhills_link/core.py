@@ -24,6 +24,22 @@ SETTINGS_EVERY = 30.0   # refresh sharing settings from 7Net
 UPDATE_EVERY = 6 * 3600 # look for a new release
 LOC_REFRESH = 60.0      # resend the place now and then even when it did not change
 
+UNLINK_UNCONFIRMED = ("7Net did not confirm the unlink, so this PC is only unlinked here. "
+                      "Unlink it on 7hills.space too: Profile \u2192 PCs.")
+
+
+def lost_key_message(e: "api.ApiError | None") -> str:
+    """Why 7Net refused this PC's key, for the window."""
+    code = getattr(e, "code", None)
+    reason = getattr(e, "reason", None)
+    if code == "expired":
+        return "This PC was not used for 90 days, so its link expired. Link it again."
+    if code == "unlinked" and reason == "admin":
+        return "An admin unlinked this PC from 7Net. Link it again if you should have access."
+    if code == "unlinked" and reason == "limit":
+        return "This PC was unlinked because another PC was linked and you can have 5. Link it again."
+    return "This PC was unlinked on 7Net. Link it again."
+
 
 def _summary(frame: dict | None) -> dict:
     """What the window shows under "Right now"."""
@@ -314,13 +330,28 @@ class Core:
             self.link, self.link_error = None, "The code expired. Start again."
 
     def unlink(self) -> None:
+        """The member pressed Unlink: 7Net stops accepting the key first, then it is forgotten here."""
+        token = self.token
+        error = None
+        if token:
+            try:
+                api.unlink_device(token)
+            except api.ApiError as e:
+                # 401: 7Net already refuses this key, so there is nothing left to unlink there.
+                if e.status != 401:
+                    error = UNLINK_UNCONFIRMED
+        self._forget_key()
+        self.link_error = error
+
+    def _forget_key(self) -> None:
         api.clear_token()
         with self.lock:
             self.token, self.linked, self.member, self.settings = None, False, None, None
 
-    def _lost_key(self) -> None:
-        self.unlink()
-        self.link_error = "This PC was unlinked on 7Net. Link it again."
+    def _lost_key(self, e: api.ApiError | None = None) -> None:
+        """7Net refused the key: forget it and say why."""
+        self._forget_key()
+        self.link_error = lost_key_message(e)
 
     # ---------------------------------------------------------------- sharing
 
@@ -333,7 +364,7 @@ class Core:
             self.member, self.settings = r.get("member"), r.get("settings")
         except api.ApiError as e:
             if e.status == 401:
-                self._lost_key()
+                self._lost_key(e)
 
     def set_share(self, patch: dict) -> dict:
         if self.token:
@@ -345,7 +376,7 @@ class Core:
                 self.member, self.settings = r.get("member"), r.get("settings")
             except api.ApiError as e:
                 if e.status == 401:
-                    self._lost_key()
+                    self._lost_key(e)
         return self.status()
 
     # ---------------------------------------------------------------- upload loop
@@ -403,8 +434,8 @@ class Core:
             except api.ApiError as e:
                 self.upload_error = e.message
                 if e.status == 401:
-                    self._lost_key()
-                elif e.status == 429:
+                    self._lost_key(e)
+                elif e.status in (429, 503):
                     backoff_until = time.time() + 2.0
 
     # ---------------------------------------------------------------- sound
