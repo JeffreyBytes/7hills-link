@@ -4,3 +4,4 @@ build/
 dist/
 *.spec
 .venv/
+!packaging/linux/7HillsLink.spec

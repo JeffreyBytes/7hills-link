@@ -109,9 +109,70 @@ jobs:
           body: |
             Windows SmartScreen asks once because the exe is not signed yet: More info → Run anyway.
             Download: https://github.com/TheBanjolorian/7hills-link/releases/latest/download/7HillsLink.exe
-            Linux (Wine/Proton): run from source, see https://github.com/TheBanjolorian/7hills-link#linux-wine--proton
+            Linux (Wine/Proton): https://github.com/TheBanjolorian/7hills-link/releases/latest/download/7HillsLink-x86_64.AppImage, see https://github.com/TheBanjolorian/7hills-link#linux-wine--proton
           files: |
             dist/7HillsLink.exe
             dist/7HillsLink.exe.sha256
           overwrite_files: true
           make_latest: true
+
+  linux:
+    needs: test
+    # Built on the oldest supported Ubuntu: the AppImage runs on systems with this glibc or newer.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgirepository1.0-dev libcairo2-dev pkg-config \
+            gir1.2-gtk-3.0 gir1.2-webkit2-4.1 gir1.2-ayatanaappindicator3-0.1 gir1.2-gstreamer-1.0
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          # PyGObject 3.51+ needs GLib 2.80 (girepository-2.0); Ubuntu 22.04 has 2.72.
+          pip install -r requirements.txt "PyGObject<3.51" pyinstaller
+      - name: appimagetool
+        run: |
+          curl -fsSL -o appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+      - name: Build AppImage
+        run: APPIMAGETOOL="$PWD/appimagetool" PYTHON=python ./packaging/linux/build-appimage.sh
+      - name: Smoke test
+        run: |
+          v=$(APPIMAGE_EXTRACT_AND_RUN=1 ./dist/7HillsLink-x86_64.AppImage --version)
+          echo "version: $v"
+          test "$v" = "$(sed -n 's/^__version__ = "\(.*\)"/\1/p' src/sevenhills_link/__init__.py)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 7HillsLink-linux
+          path: |
+            dist/7HillsLink-x86_64.AppImage
+            dist/7HillsLink-x86_64.AppImage.sha256
+
+  # Adds the AppImage to the release the windows job published, once both builds are done.
+  linux-release:
+    needs: [windows, linux]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: 7HillsLink-linux
+          path: dist
+      - name: Version
+        id: ver
+        run: echo "tag=v$(sed -n 's/^__version__ = "\(.*\)"/\1/p' src/sevenhills_link/__init__.py)" >> "$GITHUB_OUTPUT"
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          files: |
+            dist/7HillsLink-x86_64.AppImage
+            dist/7HillsLink-x86_64.AppImage.sha256
+          overwrite_files: true

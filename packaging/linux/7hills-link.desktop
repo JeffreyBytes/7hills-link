@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=7Hills Link
+Comment=Star Citizen telemetry for 7hills.space
+Exec=7HillsLink
+Icon=7hills-link
+Categories=Game;Utility;
+Terminal=false

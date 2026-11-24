@@ -64,7 +64,10 @@ def _linux_autostart(on: bool) -> bool:
         except OSError:
             return False
         return True
-    if getattr(sys, "frozen", False):
+    if os.environ.get("APPIMAGE"):
+        # Inside an AppImage sys.executable is in a mount that is gone once the app exits.
+        cmd = f'"{os.environ["APPIMAGE"]}" --autostart'
+    elif getattr(sys, "frozen", False):
         cmd = f'"{sys.executable}" --autostart'
     else:
         src = Path(__file__).resolve().parent.parent   # .../src, so the module is found from anywhere
