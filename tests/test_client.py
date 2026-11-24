@@ -192,3 +192,100 @@ def test_linux_autostart_entry(tmp_path, monkeypatch):
     assert "-m sevenhills_link --autostart" in entry and "PYTHONPATH=" in entry
     assert prefs.apply_startup(False) is True
     assert not (tmp_path / "autostart" / "7hills-link.desktop").exists()
+
+
+def test_install_id_is_made_once_and_kept(tmp_path, monkeypatch):
+    import uuid
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    from sevenhills_link import api
+    first = api.install_id()
+    assert str(uuid.UUID(first)) == first
+    assert api.install_id() == first
+    (tmp_path / "7HillsLink" / "install.id").write_text("not a uuid")
+    again = api.install_id()
+    assert again != first and api.install_id() == again
+
+
+def test_link_start_sends_the_install_id(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    from sevenhills_link import api
+    seen = {}
+    monkeypatch.setattr(api, "_call", lambda method, path, body=None, token=None, timeout=10: seen.update(path=path, body=body) or {})
+    api.start_link()
+    assert seen["path"] == "/api/telemetry/link/start"
+    assert seen["body"]["install_id"] == api.install_id()
+
+
+def _core_with_key(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
+    from sevenhills_link import core as core_mod
+    calls = []
+    monkeypatch.setattr(core_mod.api, "clear_token", lambda: calls.append("forget"))
+    c = core_mod.Core()
+    c.token, c.linked = "7hl_test", True
+    return core_mod, c, calls
+
+
+def test_unlink_tells_7net_before_forgetting_the_key(tmp_path, monkeypatch):
+    core_mod, c, calls = _core_with_key(tmp_path, monkeypatch)
+    monkeypatch.setattr(core_mod.api, "unlink_device", lambda token: calls.append("unlink " + token) or {"ok": True})
+    c.unlink()
+    assert calls == ["unlink 7hl_test", "forget"]
+    assert c.token is None and not c.linked and c.link_error is None
+
+
+def test_unlink_without_7net_still_forgets_and_says_so(tmp_path, monkeypatch):
+    core_mod, c, calls = _core_with_key(tmp_path, monkeypatch)
+    def down(token):
+        raise core_mod.api.ApiError(0, "timed out")
+    monkeypatch.setattr(core_mod.api, "unlink_device", down)
+    c.unlink()
+    assert calls == ["forget"] and c.token is None
+    assert c.link_error == core_mod.UNLINK_UNCONFIRMED
+
+
+def test_unlink_of_a_key_7net_already_refuses_is_quiet(tmp_path, monkeypatch):
+    core_mod, c, calls = _core_with_key(tmp_path, monkeypatch)
+    def refused(token):
+        raise core_mod.api.ApiError(401, "Unauthorized", "unauthorized")
+    monkeypatch.setattr(core_mod.api, "unlink_device", refused)
+    c.unlink()
+    assert calls == ["forget"] and c.link_error is None
+
+
+def test_refused_key_says_why(tmp_path, monkeypatch):
+    core_mod, c, calls = _core_with_key(tmp_path, monkeypatch)
+    E = core_mod.api.ApiError
+    def refuse(code, reason=None):
+        def f(token):
+            raise E(401, "refused", code, reason)
+        return f
+    cases = [
+        (("expired",), "90 days"),
+        (("unlinked", "admin"), "An admin unlinked"),
+        (("unlinked", "limit"), "you can have 5"),
+        (("unlinked", "user"), "This PC was unlinked on 7Net"),
+        (("unauthorized",), "This PC was unlinked on 7Net"),
+    ]
+    for args, text in cases:
+        c.token, c.linked = "7hl_test", True
+        monkeypatch.setattr(core_mod.api, "get_settings", refuse(*args))
+        c.refresh_settings(force=True)
+        assert c.token is None and not c.linked
+        assert text in c.link_error, (args, c.link_error)
+
+
+def test_api_error_carries_code_and_reason(monkeypatch):
+    import io, urllib.error
+    from sevenhills_link import api
+    body = b'{"error": "This PC was unlinked from 7Net. Link it again.", "code": "unlinked", "reason": "admin"}'
+    def boom(req, timeout=10):
+        raise urllib.error.HTTPError(req.full_url, 401, "Unauthorized", {}, io.BytesIO(body))
+    monkeypatch.setattr(api.urllib.request, "urlopen", boom)
+    try:
+        api.get_settings("7hl_test")
+    except api.ApiError as e:
+        assert (e.status, e.code, e.reason) == (401, "unlinked", "admin")
+    else:
+        raise AssertionError("expected ApiError")
