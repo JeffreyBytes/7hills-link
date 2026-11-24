@@ -47,7 +47,16 @@ def _call(method: str, path: str, body: dict | None = None, token: str | None = 
         with urllib.request.urlopen(req, timeout=timeout) as r:
             raw = r.read() or b"{}"
             traffic["in"] += len(raw) + 200
-            return json.loads(raw)
+        # A 200 that is not 7Net's JSON (a hotel wifi sign-in page, a block page from a
+        # filter) is a network problem, not an answer: report it like one instead of
+        # letting the decode error end the thread that called.
+        try:
+            answer = json.loads(raw)
+        except ValueError:
+            raise ApiError(0, "Got a web page instead of an answer from 7Net. Check the connection.") from None
+        if not isinstance(answer, dict):
+            raise ApiError(0, "Unexpected answer from 7Net.")
+        return answer
     except urllib.error.HTTPError as e:
         code = reason = None
         try:

@@ -289,3 +289,45 @@ def test_api_error_carries_code_and_reason(monkeypatch):
         assert (e.status, e.code, e.reason) == (401, "unlinked", "admin")
     else:
         raise AssertionError("expected ApiError")
+
+
+def test_a_web_page_instead_of_json_is_a_network_error(monkeypatch):
+    from sevenhills_link import api
+    class Page:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return b"<html><body>Sign in to the hotel wifi</body></html>"
+    monkeypatch.setattr(api.urllib.request, "urlopen", lambda req, timeout=10: Page())
+    try:
+        api._call("GET", "/api/telemetry/device/settings", token="7hl_test")
+        assert False, "should raise"
+    except api.ApiError as e:
+        assert e.status == 0 and "web page" in e.message
+
+
+def test_a_json_list_is_not_an_answer(monkeypatch):
+    from sevenhills_link import api
+    class Odd:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return b"[1, 2]"
+    monkeypatch.setattr(api.urllib.request, "urlopen", lambda req, timeout=10: Odd())
+    try:
+        api._call("GET", "/x")
+        assert False, "should raise"
+    except api.ApiError as e:
+        assert e.status == 0
+
+
+def test_a_401_that_is_not_from_7net_keeps_the_key(tmp_path, monkeypatch):
+    core_mod, c, calls = _core_with_key(tmp_path, monkeypatch)
+    def proxy(token):
+        raise core_mod.api.ApiError(401, "Unauthorized")
+    monkeypatch.setattr(core_mod.api, "get_settings", proxy)
+    c.refresh_settings(force=True)
+    assert c.token == "7hl_test" and calls == []
+    def seven_net(token):
+        raise core_mod.api.ApiError(401, "Unauthorized", "unauthorized")
+    monkeypatch.setattr(core_mod.api, "get_settings", seven_net)
+    c.refresh_settings(force=True)
+    assert c.token is None and calls == ["forget"]
