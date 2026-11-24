@@ -28,6 +28,13 @@ UNLINK_UNCONFIRMED = ("7Net did not confirm the unlink, so this PC is only unlin
                       "Unlink it on 7hills.space too: Profile \u2192 PCs.")
 
 
+def refused_key(e: "api.ApiError") -> bool:
+    """True when 7Net itself says the key is no longer valid. 7Net always sends a code
+    with that; a bare 401 comes from something in between (a proxy, a sign-in page) and
+    must not make the app forget a key that still works."""
+    return e.status == 401 and bool(e.code)
+
+
 def lost_key_message(e: "api.ApiError | None") -> str:
     """Why 7Net refused this PC's key, for the window."""
     code = getattr(e, "code", None)
@@ -363,7 +370,7 @@ class Core:
             r = api.get_settings(self.token)
             self.member, self.settings = r.get("member"), r.get("settings")
         except api.ApiError as e:
-            if e.status == 401:
+            if refused_key(e):
                 self._lost_key(e)
 
     def set_share(self, patch: dict) -> dict:
@@ -375,7 +382,7 @@ class Core:
                 r = api.patch_settings(self.token, body)
                 self.member, self.settings = r.get("member"), r.get("settings")
             except api.ApiError as e:
-                if e.status == 401:
+                if refused_key(e):
                     self._lost_key(e)
         return self.status()
 
@@ -433,10 +440,13 @@ class Core:
                 last_sent_frame_at, last_sent_json = at, frame_json
             except api.ApiError as e:
                 self.upload_error = e.message
-                if e.status == 401:
+                if refused_key(e):
                     self._lost_key(e)
                 elif e.status in (429, 503):
                     backoff_until = time.time() + 2.0
+                elif e.status in (401, 403):
+                    # Not a member right now, or a 401 that did not come from 7Net: keep the key, try again in a minute.
+                    backoff_until = time.time() + 60.0
 
     # ---------------------------------------------------------------- sound
 
