@@ -127,7 +127,7 @@
       </div>
       <div class="steps" style="margin-top:18px" id="steps"></div>
       <div class="hidden" id="whereCard" style="margin-top:16px;border:1px solid var(--line2);border-radius:10px;padding:12px 16px">
-        <div class="label">Where · only you see this</div>
+        <div class="label" id="whereLabel">Where · only you see this</div>
         <div class="display" style="font-size:20px;margin-top:2px" id="whereNow"></div>
         <div class="dim" style="font-size:12px" id="wherePath"></div>
       </div>
@@ -336,8 +336,6 @@
     return { steps, head: blocked < 0 ? { text: 'Live on 7Net', color: 'g' } : { text: steps[blocked].head, color: steps[blocked].bad } }
   }
 
-  const live0 = s => !!(s.game_connected && s.linked)
-
   function render(s) {
     const first = S === null
     S = s
@@ -383,7 +381,9 @@
     $('subline').textContent = [name || (s.linked ? 'Linked' : 'Not linked'), where, s.game_found ? s.channel : ''].filter(Boolean).join(' · ')
     const extra = n.ship ? ['Gear ' + (n.gear || '?'), n.mode, n.power_on ? 'Power on' : 'Power off'].filter(Boolean).join(' · ') : ''
     // Place from Game.log joined with what the telemetry says you are doing there.
-    show('whereCard', !!s.where && live0(s))
+    // Shown whenever Game.log gave a place, also before the telemetry connects (as 0.5.x did in the line above).
+    show('whereCard', !!s.where)
+    $('whereLabel').textContent = s.game_connected ? 'Where · only you see this' : 'Where · from Game.log, game not connected · only you see this'
     $('whereNow').textContent = s.situation || (s.where ? s.where.split(' › ').pop() : '')
     $('wherePath').textContent = s.where || ''
     $('steps').innerHTML = p.steps.map(st => '<span><span class="bub ' + st.color + '"></span>' + esc(st.name) + '</span>').join('') + (extra ? '<span style="margin-left:auto">' + esc(extra) + '</span>' : '')
