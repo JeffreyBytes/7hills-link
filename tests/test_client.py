@@ -187,6 +187,7 @@ def test_linux_single_instance_and_show_request(tmp_path, monkeypatch):
 
 def test_linux_autostart_entry(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.delenv("APPIMAGE", raising=False)
     from sevenhills_link import prefs
     assert prefs.can_autostart() is True
     assert prefs.apply_startup(True) is True
@@ -194,6 +195,18 @@ def test_linux_autostart_entry(tmp_path, monkeypatch):
     assert "-m sevenhills_link --autostart" in entry and "PYTHONPATH=" in entry
     assert prefs.apply_startup(False) is True
     assert not (tmp_path / "autostart" / "7hills-link.desktop").exists()
+
+
+def test_linux_autostart_entry_appimage(tmp_path, monkeypatch):
+    """Inside an AppImage the entry must start the .AppImage file, not the temporary mount."""
+    import sys
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("APPIMAGE", "/home/me/Apps/7HillsLink-x86_64.AppImage")
+    from sevenhills_link import prefs
+    assert prefs.apply_startup(True) is True
+    entry = (tmp_path / "autostart" / "7hills-link.desktop").read_text()
+    assert 'Exec="/home/me/Apps/7HillsLink-x86_64.AppImage" --autostart' in entry
 
 
 def test_install_id_is_made_once_and_kept(tmp_path, monkeypatch):

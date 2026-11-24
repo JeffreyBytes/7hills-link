@@ -4,7 +4,7 @@ Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star 
 
 **Download:** [7HillsLink.exe](https://github.com/TheBanjolorian/7hills-link/releases/latest/download/7HillsLink.exe) (Windows 10/11). The exe is not code-signed yet, so Windows SmartScreen asks once: *More info → Run anyway*.
 
-**Linux:** runs natively from source with the game in Wine/Proton (LUG helper, Lutris, Steam). Tested on LIVE with KDE Plasma on Wayland. See [Linux (Wine / Proton)](#linux-wine--proton).
+**Linux:** [7HillsLink-x86_64.AppImage](https://github.com/TheBanjolorian/7hills-link/releases/latest/download/7HillsLink-x86_64.AppImage), or run from source, with the game in Wine/Proton (LUG helper, Lutris, Steam). Tested on LIVE with KDE Plasma on Wayland. See [Linux (Wine / Proton)](#linux-wine--proton).
 
 ## What it does
 
@@ -24,8 +24,14 @@ Desktop client for [7Hills Industries](https://www.7hills.space). It reads Star 
 
 ## Linux (Wine / Proton)
 
-The client runs natively on Linux from source (see *Run from source*; use `export PYTHONPATH=src`). The game's telemetry server listens on the host's loopback through Wine, so the native client can reach it. Tested on CachyOS (KDE Plasma, Wayland) with a LUG helper prefix on 4.x LIVE.
+The client runs natively on Linux, as an AppImage or from source (see *Run from source*; use `export PYTHONPATH=src`). The game's telemetry server listens on the host's loopback through Wine, so the native client can reach it. Tested on CachyOS (KDE Plasma, Wayland) with a LUG helper prefix on 4.x LIVE.
 
+- **AppImage:** download `7HillsLink-x86_64.AppImage`, `chmod +x` it and run it. It bundles Python and the client but uses your desktop's GTK 3, WebKitGTK 4.1, AppIndicator and GStreamer, so these must be installed (most desktops have nearly all of them):
+  - Arch: `webkit2gtk-4.1 libayatana-appindicator gobject-introspection-runtime gst-plugins-good`
+  - Debian/Ubuntu: `gir1.2-webkit2-4.1 gir1.2-ayatanaappindicator3-0.1 gstreamer1.0-plugins-good`
+  - Fedora: `webkit2gtk4.1 libayatana-appindicator-gtk3 gstreamer1-plugins-good`
+
+  Without `gst-plugins-good` the window works but the music stays off. Built on Ubuntu 22.04, so it needs that glibc (2.35) or newer. It does not update itself yet: download the new AppImage from the release.
 - **Finding the game:** it looks inside the usual prefixes (`$WINEPREFIX`, `~/Games/star-citizen` from the LUG helper, other `~/Games/*` Lutris prefixes, Steam/Proton `compatdata/*/pfx`, `~/.wine`), reads the RSI Launcher's files inside them, and maps the running `StarCitizen.exe` back to its folder. If it misses yours, point it there:
   ```
   python -m sevenhills_link --game-dir ~/Games/star-citizen
@@ -62,4 +68,4 @@ python -m sevenhills_link            # window
 python -m sevenhills_link --headless
 ```
 
-Tests: `PYTHONPATH=src python -m pytest -q tests`. Builds: GitHub Actions builds `7HillsLink.exe` on every push; every push to `main` publishes the release for the version in `src/sevenhills_link/__init__.py`.
+Tests: `PYTHONPATH=src python -m pytest -q tests`. Builds: GitHub Actions builds `7HillsLink.exe` and `7HillsLink-x86_64.AppImage` on every push (the AppImage locally: `./packaging/linux/build-appimage.sh`, needs `pyinstaller` and [appimagetool](https://github.com/AppImage/appimagetool)); every push to `main` publishes the release for the version in `src/sevenhills_link/__init__.py`.
