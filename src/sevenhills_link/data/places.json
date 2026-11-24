@@ -1,0 +1,1608 @@
+{
+ "version": 1,
+ "build": "LIVE dump 2026-11",
+ "source": "Star Citizen game files: system object containers, starmap records, english/global.ini",
+ "places": [
+  {
+   "id": "stanton",
+   "kind": "system",
+   "name": "Stanton",
+   "parent": null,
+   "match": [
+    "OOC_Stanton",
+    "StantonStar"
+   ]
+  },
+  {
+   "id": "stanton/hurston",
+   "kind": "planet",
+   "name": "Hurston",
+   "parent": "stanton",
+   "match": [
+    "Hurston",
+    "OOC_Stanton_1_Hurston",
+    "Stanton1"
+   ],
+   "pos": [
+    12.85,
+    0.0
+   ]
+  },
+  {
+   "id": "stanton/arccorp",
+   "kind": "planet",
+   "name": "ArcCorp",
+   "parent": "stanton",
+   "match": [
+    "ArcCorp",
+    "OOC_Stanton_3_ArcCorp",
+    "Stanton3"
+   ],
+   "pos": [
+    18.588,
+    -22.152
+   ]
+  },
+  {
+   "id": "stanton/microtech",
+   "kind": "planet",
+   "name": "microTech",
+   "parent": "stanton",
+   "match": [
+    "OOC_Stanton_4_Microtech",
+    "Stanton4",
+    "microTech"
+   ],
+   "pos": [
+    22.462,
+    37.186
+   ]
+  },
+  {
+   "id": "stanton/crusader",
+   "kind": "planet",
+   "name": "Crusader",
+   "parent": "stanton",
+   "match": [
+    "Crusader",
+    "OOC_Stanton_2_Crusader",
+    "Stanton2"
+   ],
+   "pos": [
+    -18.962,
+    -2.665
+   ]
+  },
+  {
+   "id": "stanton/hurston/arial",
+   "kind": "moon",
+   "name": "Arial",
+   "parent": "stanton/hurston",
+   "match": [
+    "Arial",
+    "OOC_Stanton_1a_Ariel",
+    "Stanton1a"
+   ]
+  },
+  {
+   "id": "stanton/hurston/aberdeen",
+   "kind": "moon",
+   "name": "Aberdeen",
+   "parent": "stanton/hurston",
+   "match": [
+    "Aberdeen",
+    "OOC_Stanton_1b_Aberdeen",
+    "Stanton1b"
+   ]
+  },
+  {
+   "id": "stanton/hurston/ita",
+   "kind": "moon",
+   "name": "Ita",
+   "parent": "stanton/hurston",
+   "match": [
+    "Ita",
+    "OOC_Stanton_1d_Ita",
+    "Stanton1d"
+   ]
+  },
+  {
+   "id": "stanton/hurston/magda",
+   "kind": "moon",
+   "name": "Magda",
+   "parent": "stanton/hurston",
+   "match": [
+    "Magda",
+    "OOC_Stanton_1c_Magda",
+    "Stanton1c"
+   ]
+  },
+  {
+   "id": "stanton/arccorp/wala",
+   "kind": "moon",
+   "name": "Wala",
+   "parent": "stanton/arccorp",
+   "match": [
+    "OOC_Stanton_3b_Wala",
+    "Stanton3b",
+    "Wala"
+   ]
+  },
+  {
+   "id": "stanton/arccorp/lyria",
+   "kind": "moon",
+   "name": "Lyria",
+   "parent": "stanton/arccorp",
+   "match": [
+    "Lyria",
+    "OOC_Stanton_3a_Lyria",
+    "Stanton3a"
+   ]
+  },
+  {
+   "id": "stanton/microtech/calliope",
+   "kind": "moon",
+   "name": "Calliope",
+   "parent": "stanton/microtech",
+   "match": [
+    "Calliope",
+    "OOC_Stanton_4a_Calliope",
+    "Stanton4a"
+   ]
+  },
+  {
+   "id": "stanton/microtech/euterpe",
+   "kind": "moon",
+   "name": "Euterpe",
+   "parent": "stanton/microtech",
+   "match": [
+    "Euterpe",
+    "OOC_Stanton_4c_Euterpe",
+    "Stanton4c"
+   ]
+  },
+  {
+   "id": "stanton/microtech/clio",
+   "kind": "moon",
+   "name": "Clio",
+   "parent": "stanton/microtech",
+   "match": [
+    "Clio",
+    "OOC_Stanton_4b_Clio",
+    "Stanton4b"
+   ]
+  },
+  {
+   "id": "stanton/crusader/yela",
+   "kind": "moon",
+   "name": "Yela",
+   "parent": "stanton/crusader",
+   "match": [
+    "OOC_Stanton_2c_Yela",
+    "Stanton2c",
+    "Yela"
+   ]
+  },
+  {
+   "id": "stanton/crusader/daymar",
+   "kind": "moon",
+   "name": "Daymar",
+   "parent": "stanton/crusader",
+   "match": [
+    "Daymar",
+    "OOC_Stanton_2b_Daymar",
+    "Stanton2b"
+   ]
+  },
+  {
+   "id": "stanton/crusader/cellin",
+   "kind": "moon",
+   "name": "Cellin",
+   "parent": "stanton/crusader",
+   "match": [
+    "Cellin",
+    "OOC_Stanton_2a_Cellin",
+    "Stanton2a"
+   ]
+  },
+  {
+   "id": "stanton/hurston/lorville",
+   "kind": "city",
+   "name": "Lorville",
+   "parent": "stanton/hurston",
+   "match": [
+    "Lorville",
+    "lorville"
+   ]
+  },
+  {
+   "id": "stanton/hurston/everus-harbor",
+   "kind": "station",
+   "name": "Everus Harbor",
+   "parent": "stanton/hurston",
+   "match": [
+    "Everus Harbor",
+    "EverusHarbor",
+    "rr_hur_leo"
+   ]
+  },
+  {
+   "id": "stanton/crusader/orison",
+   "kind": "city",
+   "name": "Orison",
+   "parent": "stanton/crusader",
+   "match": [
+    "Orison",
+    "orison"
+   ]
+  },
+  {
+   "id": "stanton/crusader/seraphim-station",
+   "kind": "station",
+   "name": "Seraphim Station",
+   "parent": "stanton/crusader",
+   "match": [
+    "Seraphim Station",
+    "SeraphimStation",
+    "rr_cru_leo"
+   ]
+  },
+  {
+   "id": "stanton/arccorp/area18",
+   "kind": "city",
+   "name": "Area18",
+   "parent": "stanton/arccorp",
+   "match": [
+    "Area18",
+    "area18"
+   ]
+  },
+  {
+   "id": "stanton/arccorp/baijini-point",
+   "kind": "station",
+   "name": "Baijini Point",
+   "parent": "stanton/arccorp",
+   "match": [
+    "Baijini Point",
+    "BaijiniPoint",
+    "rr_arc_leo"
+   ]
+  },
+  {
+   "id": "stanton/microtech/new-babbage",
+   "kind": "city",
+   "name": "New Babbage",
+   "parent": "stanton/microtech",
+   "match": [
+    "New Babbage",
+    "NewBabbage",
+    "newbabbage"
+   ]
+  },
+  {
+   "id": "stanton/microtech/port-tressler",
+   "kind": "station",
+   "name": "Port Tressler",
+   "parent": "stanton/microtech",
+   "match": [
+    "Port Tressler",
+    "PortTressler",
+    "rr_mic_leo"
+   ]
+  },
+  {
+   "id": "stanton/cru-l3",
+   "kind": "lpoint",
+   "name": "CRU L3",
+   "parent": "stanton",
+   "match": [
+    "CRU-L3",
+    "CRU_L3",
+    "OOC_Stanton2_L3",
+    "RR_CRU_L3",
+    "Stanton2_L3"
+   ],
+   "near": "stanton/crusader",
+   "pos": [
+    18.962,
+    2.665
+   ]
+  },
+  {
+   "id": "stanton/hur-l1",
+   "kind": "lpoint",
+   "name": "HUR L1",
+   "parent": "stanton",
+   "match": [
+    "HUR-L1",
+    "HUR-L1 Green Glade Station",
+    "HUR_L1",
+    "OOC_Stanton1_L1",
+    "RR_HUR_L1",
+    "Stanton1_L1"
+   ],
+   "station": "HUR-L1 Green Glade Station",
+   "near": "stanton/hurston",
+   "pos": [
+    11.565,
+    0.0
+   ]
+  },
+  {
+   "id": "stanton/hur-l5",
+   "kind": "lpoint",
+   "name": "HUR L5",
+   "parent": "stanton",
+   "match": [
+    "HUR-L5",
+    "HUR-L5 High Course Station",
+    "HUR_L5",
+    "OOC_Stanton1_L5",
+    "RR_HUR_L5",
+    "Stanton1_L5"
+   ],
+   "station": "HUR-L5 High Course Station",
+   "near": "stanton/hurston",
+   "pos": [
+    6.425,
+    -11.129
+   ]
+  },
+  {
+   "id": "stanton/cru-l4",
+   "kind": "lpoint",
+   "name": "CRU L4",
+   "parent": "stanton",
+   "match": [
+    "CRU-L4",
+    "CRU-L4 Shallow Fields Station",
+    "CRU_L4",
+    "OOC_Stanton2_L4",
+    "RR_CRU_L4",
+    "Stanton2_L4"
+   ],
+   "station": "CRU-L4 Shallow Fields Station",
+   "near": "stanton/crusader",
+   "pos": [
+    -7.173,
+    -17.754
+   ]
+  },
+  {
+   "id": "stanton/hur-l3",
+   "kind": "lpoint",
+   "name": "HUR L3",
+   "parent": "stanton",
+   "match": [
+    "HUR-L3",
+    "HUR-L3 Thundering Express Station",
+    "HUR_L3",
+    "OOC_Stanton1_L3",
+    "RR_HUR_L3",
+    "Stanton1_L3"
+   ],
+   "station": "HUR-L3 Thundering Express Station",
+   "near": "stanton/hurston",
+   "pos": [
+    -12.85,
+    -0.0
+   ]
+  },
+  {
+   "id": "stanton/arc-l5",
+   "kind": "lpoint",
+   "name": "ARC L5",
+   "parent": "stanton",
+   "match": [
+    "ARC-L5",
+    "ARC-L5 Yellow Core Station",
+    "ARC_L5",
+    "OOC_Stanton3_L5",
+    "RR_ARC_L5",
+    "Stanton3_L5"
+   ],
+   "station": "ARC-L5 Yellow Core Station",
+   "near": "stanton/arccorp",
+   "pos": [
+    -9.89,
+    -27.174
+   ]
+  },
+  {
+   "id": "stanton/hur-l2",
+   "kind": "lpoint",
+   "name": "HUR L2",
+   "parent": "stanton",
+   "match": [
+    "HUR-L2",
+    "HUR-L2 Faithful Dream Station",
+    "HUR_L2",
+    "OOC_Stanton1_L2",
+    "RR_HUR_L2",
+    "Stanton1_L2"
+   ],
+   "station": "HUR-L2 Faithful Dream Station",
+   "near": "stanton/hurston",
+   "pos": [
+    14.136,
+    0.0
+   ]
+  },
+  {
+   "id": "stanton/cru-l2",
+   "kind": "lpoint",
+   "name": "CRU L2",
+   "parent": "stanton",
+   "match": [
+    "CRU-L2",
+    "CRU_L2",
+    "OOC_Stanton2_L2",
+    "RR_CRU_L2",
+    "Stanton2_L2"
+   ],
+   "near": "stanton/crusader",
+   "pos": [
+    -20.858,
+    -2.931
+   ]
+  },
+  {
+   "id": "stanton/cru-l5",
+   "kind": "lpoint",
+   "name": "CRU L5",
+   "parent": "stanton",
+   "match": [
+    "CRU-L5",
+    "CRU-L5 Beautiful Glen Station",
+    "CRU_L5",
+    "OOC_Stanton2_L5",
+    "RR_CRU_L5",
+    "Stanton2_L5"
+   ],
+   "station": "CRU-L5 Beautiful Glen Station",
+   "near": "stanton/crusader",
+   "pos": [
+    -11.789,
+    15.089
+   ]
+  },
+  {
+   "id": "stanton/mic-l2",
+   "kind": "lpoint",
+   "name": "MIC L2",
+   "parent": "stanton",
+   "match": [
+    "MIC-L2",
+    "MIC-L2 Long Forest Station",
+    "MIC_L2",
+    "OOC_Stanton4_L2",
+    "RR_MIC_L2",
+    "Stanton4_L2"
+   ],
+   "station": "MIC-L2 Long Forest Station",
+   "near": "stanton/microtech",
+   "pos": [
+    24.709,
+    40.905
+   ]
+  },
+  {
+   "id": "stanton/hur-l4",
+   "kind": "lpoint",
+   "name": "HUR L4",
+   "parent": "stanton",
+   "match": [
+    "HUR-L4",
+    "HUR-L4 Melodic Fields Station",
+    "HUR_L4",
+    "OOC_Stanton1_L4",
+    "RR_HUR_L4",
+    "Stanton1_L4"
+   ],
+   "station": "HUR-L4 Melodic Fields Station",
+   "near": "stanton/hurston",
+   "pos": [
+    6.425,
+    11.129
+   ]
+  },
+  {
+   "id": "stanton/arc-l2",
+   "kind": "lpoint",
+   "name": "ARC L2",
+   "parent": "stanton",
+   "match": [
+    "ARC-L2",
+    "ARC-L2 Lively Pathway Station",
+    "ARC_L2",
+    "OOC_Stanton3_L2",
+    "RR_ARC_L2",
+    "Stanton3_L2"
+   ],
+   "station": "ARC-L2 Lively Pathway Station",
+   "near": "stanton/arccorp",
+   "pos": [
+    20.447,
+    -24.367
+   ]
+  },
+  {
+   "id": "stanton/arc-l4",
+   "kind": "lpoint",
+   "name": "ARC L4",
+   "parent": "stanton",
+   "match": [
+    "ARC-L4",
+    "ARC-L4 Faint Glen Station",
+    "ARC_L4",
+    "OOC_Stanton3_L4",
+    "RR_ARC_L4",
+    "Stanton3_L4"
+   ],
+   "station": "ARC-L4 Faint Glen Station",
+   "near": "stanton/arccorp",
+   "pos": [
+    28.478,
+    5.022
+   ]
+  },
+  {
+   "id": "stanton/arc-l1",
+   "kind": "lpoint",
+   "name": "ARC L1",
+   "parent": "stanton",
+   "match": [
+    "ARC-L1",
+    "ARC-L1 Wide Forest Station",
+    "ARC_L1",
+    "OOC_Stanton3_L1",
+    "RR_ARC_L1",
+    "Stanton3_L1"
+   ],
+   "station": "ARC-L1 Wide Forest Station",
+   "near": "stanton/arccorp",
+   "pos": [
+    16.729,
+    -19.937
+   ]
+  },
+  {
+   "id": "stanton/arc-l3",
+   "kind": "lpoint",
+   "name": "ARC L3",
+   "parent": "stanton",
+   "match": [
+    "ARC-L3",
+    "ARC-L3 Modern Express Station",
+    "ARC_L3",
+    "OOC_Stanton3_L3",
+    "RR_ARC_L3",
+    "Stanton3_L3"
+   ],
+   "station": "ARC-L3 Modern Express Station",
+   "near": "stanton/arccorp",
+   "pos": [
+    -25.043,
+    14.459
+   ]
+  },
+  {
+   "id": "stanton/mic-l1",
+   "kind": "lpoint",
+   "name": "MIC L1",
+   "parent": "stanton",
+   "match": [
+    "MIC-L1",
+    "MIC-L1 Shallow Frontier Station",
+    "MIC_L1",
+    "OOC_Stanton4_L1",
+    "RR_MIC_L1",
+    "Stanton4_L1"
+   ],
+   "station": "MIC-L1 Shallow Frontier Station",
+   "near": "stanton/microtech",
+   "pos": [
+    20.216,
+    33.467
+   ]
+  },
+  {
+   "id": "stanton/cru-l1",
+   "kind": "lpoint",
+   "name": "CRU L1",
+   "parent": "stanton",
+   "match": [
+    "CRU-L1",
+    "CRU-L1 Ambitious Dream Station",
+    "CRU_L1",
+    "OOC_Stanton2_L1",
+    "RR_CRU_L1",
+    "Stanton2_L1"
+   ],
+   "station": "CRU-L1 Ambitious Dream Station",
+   "near": "stanton/crusader",
+   "pos": [
+    -17.066,
+    -2.398
+   ]
+  },
+  {
+   "id": "stanton/mic-l5",
+   "kind": "lpoint",
+   "name": "MIC L5",
+   "parent": "stanton",
+   "match": [
+    "MIC-L5",
+    "MIC-L5 Modern Icarus Station",
+    "MIC_L5",
+    "OOC_Stanton4_L5",
+    "RR_MIC_L5",
+    "Stanton4_L5"
+   ],
+   "station": "MIC-L5 Modern Icarus Station",
+   "near": "stanton/microtech",
+   "pos": [
+    43.435,
+    -0.851
+   ]
+  },
+  {
+   "id": "stanton/mic-l4",
+   "kind": "lpoint",
+   "name": "MIC L4",
+   "parent": "stanton",
+   "match": [
+    "MIC-L4",
+    "MIC-L4 Red Crossroads Station",
+    "MIC_L4",
+    "OOC_Stanton4_L4",
+    "RR_MIC_L4",
+    "Stanton4_L4"
+   ],
+   "station": "MIC-L4 Red Crossroads Station",
+   "near": "stanton/microtech",
+   "pos": [
+    -20.972,
+    38.046
+   ]
+  },
+  {
+   "id": "stanton/mic-l3",
+   "kind": "lpoint",
+   "name": "MIC L3",
+   "parent": "stanton",
+   "match": [
+    "MIC-L3",
+    "MIC-L3 Endless Odyssey Station",
+    "MIC_L3",
+    "OOC_Stanton4_L3",
+    "RR_MIC_L3",
+    "Stanton4_L3"
+   ],
+   "station": "MIC-L3 Endless Odyssey Station",
+   "near": "stanton/microtech",
+   "pos": [
+    -22.457,
+    -37.188
+   ]
+  },
+  {
+   "id": "stanton/aaron-halo",
+   "kind": "belt",
+   "name": "Aaron Halo",
+   "parent": "stanton",
+   "match": [
+    "AaronHalo",
+    "OOC_AaronHalo"
+   ],
+   "pos": [
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "id": "stanton/jump-magnus",
+   "kind": "jump",
+   "name": "Magnus Gateway",
+   "parent": "stanton",
+   "match": [
+    "Magnus Gateway",
+    "OOC_JumpPoint_stanton_magnus",
+    "Stanton_magnus_JPStation"
+   ],
+   "to": "magnus",
+   "pos": [
+    -62.284,
+    23.468
+   ]
+  },
+  {
+   "id": "stanton/jump-pyro",
+   "kind": "jump",
+   "name": "Pyro Gateway",
+   "parent": "stanton",
+   "match": [
+    "OOC_JumpPoint_stanton_pyro",
+    "Pyro Gateway",
+    "Stanton_pyro_JPStation"
+   ],
+   "to": "pyro",
+   "pos": [
+    3.31,
+    -27.979
+   ]
+  },
+  {
+   "id": "stanton/jump-terra",
+   "kind": "jump",
+   "name": "Terra Gateway",
+   "parent": "stanton",
+   "match": [
+    "OOC_JumpPoint_stanton_terra",
+    "Stanton_terra_JPStation",
+    "Terra Gateway"
+   ],
+   "to": "terra",
+   "pos": [
+    51.118,
+    -5.27
+   ]
+  },
+  {
+   "id": "pyro",
+   "kind": "system",
+   "name": "Pyro",
+   "parent": null,
+   "match": [
+    "PyroStar",
+    "pyrostar"
+   ]
+  },
+  {
+   "id": "pyro/pyro-i",
+   "kind": "planet",
+   "name": "Pyro I",
+   "parent": "pyro",
+   "match": [
+    "Pyro I",
+    "Pyro1",
+    "pyro1"
+   ],
+   "pos": [
+    -7.921,
+    -2.387
+   ]
+  },
+  {
+   "id": "pyro/monox",
+   "kind": "planet",
+   "name": "Monox",
+   "parent": "pyro",
+   "match": [
+    "Monox",
+    "Pyro II",
+    "Pyro2",
+    "pyro2"
+   ],
+   "pos": [
+    6.057,
+    -8.725
+   ]
+  },
+  {
+   "id": "pyro/bloom",
+   "kind": "planet",
+   "name": "Bloom",
+   "parent": "pyro",
+   "match": [
+    "Bloom",
+    "Pyro III",
+    "Pyro3",
+    "pyro3"
+   ],
+   "pos": [
+    -16.104,
+    7.588
+   ]
+  },
+  {
+   "id": "pyro/pyro-iv",
+   "kind": "planet",
+   "name": "Pyro IV",
+   "parent": "pyro",
+   "match": [
+    "Pyro IV",
+    "Pyro4",
+    "pyro4"
+   ],
+   "pos": [
+    -3.704,
+    -43.072
+   ]
+  },
+  {
+   "id": "pyro/pyro-v",
+   "kind": "planet",
+   "name": "Pyro V",
+   "parent": "pyro",
+   "match": [
+    "Pyro V",
+    "Pyro5",
+    "pyro5"
+   ],
+   "pos": [
+    -3.912,
+    -42.759
+   ]
+  },
+  {
+   "id": "pyro/terminus",
+   "kind": "planet",
+   "name": "Terminus",
+   "parent": "pyro",
+   "match": [
+    "Pyro VI",
+    "Pyro6",
+    "Terminus",
+    "pyro6"
+   ],
+   "pos": [
+    -48.118,
+    48.503
+   ]
+  },
+  {
+   "id": "pyro/pyro-v/ignis",
+   "kind": "moon",
+   "name": "Ignis",
+   "parent": "pyro/pyro-v",
+   "match": [
+    "Ignis",
+    "Pyro5a_Ignis",
+    "pyro5a"
+   ]
+  },
+  {
+   "id": "pyro/pyro-v/vatra",
+   "kind": "moon",
+   "name": "Vatra",
+   "parent": "pyro/pyro-v",
+   "match": [
+    "Pyro5b_Vatra",
+    "Vatra",
+    "pyro5b"
+   ]
+  },
+  {
+   "id": "pyro/pyro-v/adir",
+   "kind": "moon",
+   "name": "Adir",
+   "parent": "pyro/pyro-v",
+   "match": [
+    "Adir",
+    "Pyro5c_Adir",
+    "pyro5c"
+   ]
+  },
+  {
+   "id": "pyro/pyro-v/fairo",
+   "kind": "moon",
+   "name": "Fairo",
+   "parent": "pyro/pyro-v",
+   "match": [
+    "Fairo",
+    "Pyro5d_Fairo",
+    "pyro5d"
+   ]
+  },
+  {
+   "id": "pyro/pyro-v/fuego",
+   "kind": "moon",
+   "name": "Fuego",
+   "parent": "pyro/pyro-v",
+   "match": [
+    "Fuego",
+    "Pyro5e_Fuego",
+    "pyro5e"
+   ]
+  },
+  {
+   "id": "pyro/pyro-v/vuur",
+   "kind": "moon",
+   "name": "Vuur",
+   "parent": "pyro/pyro-v",
+   "match": [
+    "Pyro5f_Vuur",
+    "Vuur",
+    "pyro5f"
+   ]
+  },
+  {
+   "id": "pyro/monox/pyam-farstat-2-0",
+   "kind": "station",
+   "name": "PYAM-FARSTAT-2-0",
+   "parent": "pyro/monox",
+   "match": [
+    "PYAM-FARSTAT-2-0",
+    "RR_P2"
+   ]
+  },
+  {
+   "id": "pyro/bloom/orbituary",
+   "kind": "station",
+   "name": "Orbituary",
+   "parent": "pyro/bloom",
+   "match": [
+    "Orbituary",
+    "RR_P3"
+   ]
+  },
+  {
+   "id": "pyro/terminus/ruin-station",
+   "kind": "station",
+   "name": "Ruin Station",
+   "parent": "pyro/terminus",
+   "match": [
+    "RR_P6",
+    "Ruin Station",
+    "RuinStation"
+   ]
+  },
+  {
+   "id": "pyro/pyr3-l2",
+   "kind": "lpoint",
+   "name": "PYR3 L2",
+   "parent": "pyro",
+   "match": [
+    "P3_L2",
+    "PYR3-L2",
+    "PYR3_L2",
+    "Pyro3_L2",
+    "RR_P3_L2"
+   ],
+   "near": "pyro/bloom",
+   "pos": [
+    -17.714,
+    8.347
+   ]
+  },
+  {
+   "id": "pyro/pyr5-l2",
+   "kind": "lpoint",
+   "name": "PYR5 L2",
+   "parent": "pyro",
+   "match": [
+    "Gaslight",
+    "P5_L2",
+    "PYR5-L2",
+    "PYR5_L2",
+    "Pyro5_L2",
+    "RR_P5_L2"
+   ],
+   "station": "Gaslight",
+   "near": "pyro/pyro-v",
+   "pos": [
+    -4.305,
+    -47.034
+   ]
+  },
+  {
+   "id": "pyro/pyr3-l4",
+   "kind": "lpoint",
+   "name": "PYR3 L4",
+   "parent": "pyro",
+   "match": [
+    "P3_L4",
+    "PYR3-L4",
+    "PYR3_L4",
+    "Pyro3_L4",
+    "RR_P3_L4"
+   ],
+   "near": "pyro/bloom",
+   "pos": [
+    -14.624,
+    -10.152
+   ]
+  },
+  {
+   "id": "pyro/pyr3-l1",
+   "kind": "lpoint",
+   "name": "PYR3 L1",
+   "parent": "pyro",
+   "match": [
+    "P3_L1",
+    "PYR3-L1",
+    "PYR3_L1",
+    "Pyro3_L1",
+    "RR_P3_L1",
+    "Starlight Service Station",
+    "StarlightServiceStation"
+   ],
+   "station": "Starlight Service Station",
+   "near": "pyro/bloom",
+   "pos": [
+    -14.611,
+    6.575
+   ]
+  },
+  {
+   "id": "pyro/pyr2-l1",
+   "kind": "lpoint",
+   "name": "PYR2 L1",
+   "parent": "pyro",
+   "match": [
+    "P2_L1",
+    "PYR2-L1",
+    "PYR2_L1",
+    "Pyro2_L1",
+    "RR_P2_L1"
+   ],
+   "near": "pyro/monox",
+   "pos": [
+    5.588,
+    -7.755
+   ]
+  },
+  {
+   "id": "pyro/pyr3-l5",
+   "kind": "lpoint",
+   "name": "PYR3 L5",
+   "parent": "pyro",
+   "match": [
+    "P3_L5",
+    "PYAM-FARSTAT-3-5",
+    "PYR3-L5",
+    "PYR3_L5",
+    "Pyro3_L5",
+    "RR_P3_L5"
+   ],
+   "station": "PYAM-FARSTAT-3-5",
+   "near": "pyro/bloom",
+   "pos": [
+    12.638,
+    12.537
+   ]
+  },
+  {
+   "id": "pyro/pyr3-l3",
+   "kind": "lpoint",
+   "name": "PYR3 L3",
+   "parent": "pyro",
+   "match": [
+    "P3_L3",
+    "PYR3-L3",
+    "PYR3_L3",
+    "Patch City",
+    "PatchCity",
+    "Pyro3_L3",
+    "RR_P3_L3"
+   ],
+   "station": "Patch City",
+   "near": "pyro/bloom",
+   "pos": [
+    14.542,
+    -10.269
+   ]
+  },
+  {
+   "id": "pyro/pyr6-l2",
+   "kind": "lpoint",
+   "name": "PYR6 L2",
+   "parent": "pyro",
+   "match": [
+    "P6_L2",
+    "PYAM-FARSTAT-6-2",
+    "PYR6-L2",
+    "PYR6_L2",
+    "Pyro6_L2",
+    "RR_P6_L2"
+   ],
+   "station": "PYAM-FARSTAT-6-2",
+   "near": "pyro/terminus",
+   "pos": [
+    -49.918,
+    50.32
+   ]
+  },
+  {
+   "id": "pyro/pyr6-l5",
+   "kind": "lpoint",
+   "name": "PYR6 L5",
+   "parent": "pyro",
+   "match": [
+    "Megumi Refueling",
+    "MegumiRefueling",
+    "P6_L5",
+    "PYR6-L5",
+    "PYR6_L5",
+    "Pyro6_L5",
+    "RR_P6_L5"
+   ],
+   "station": "Megumi Refueling",
+   "near": "pyro/terminus",
+   "pos": [
+    29.122,
+    61.805
+   ]
+  },
+  {
+   "id": "pyro/pyr6-l3",
+   "kind": "lpoint",
+   "name": "PYR6 L3",
+   "parent": "pyro",
+   "match": [
+    "Endgame",
+    "P6_L3",
+    "PYR6-L3",
+    "PYR6_L3",
+    "Pyro6_L3",
+    "RR_P6_L3"
+   ],
+   "station": "Endgame",
+   "near": "pyro/terminus",
+   "pos": [
+    52.161,
+    -44.126
+   ]
+  },
+  {
+   "id": "pyro/pyr2-l5",
+   "kind": "lpoint",
+   "name": "PYR2 L5",
+   "parent": "pyro",
+   "match": [
+    "P2_L5",
+    "PYR2-L5",
+    "PYR2_L5",
+    "Pyro2_L5",
+    "RR_P2_L5"
+   ],
+   "near": "pyro/monox",
+   "pos": [
+    -6.127,
+    -8.676
+   ]
+  },
+  {
+   "id": "pyro/pyr1-l2",
+   "kind": "lpoint",
+   "name": "PYR1 L2",
+   "parent": "pyro",
+   "match": [
+    "P1_L2",
+    "PYAM-FARSTAT-1-2",
+    "PYR1-L2",
+    "PYR1_L2",
+    "Pyro1_L2",
+    "RR_P1_L2"
+   ],
+   "station": "PYAM-FARSTAT-1-2",
+   "near": "pyro/pyro-i",
+   "pos": [
+    -8.713,
+    -2.626
+   ]
+  },
+  {
+   "id": "pyro/pyr1-l4",
+   "kind": "lpoint",
+   "name": "PYR1 L4",
+   "parent": "pyro",
+   "match": [
+    "P1_L4",
+    "PYR1-L4",
+    "PYR1_L4",
+    "Pyro1_L4",
+    "RR_P1_L4"
+   ],
+   "near": "pyro/pyro-i",
+   "pos": [
+    -1.893,
+    -8.053
+   ]
+  },
+  {
+   "id": "pyro/pyr1-l5",
+   "kind": "lpoint",
+   "name": "PYR1 L5",
+   "parent": "pyro",
+   "match": [
+    "P1_L5",
+    "PYAM-FARSTAT-1-5",
+    "PYR1-L5",
+    "PYR1_L5",
+    "Pyro1_L5",
+    "RR_P1_L5"
+   ],
+   "station": "PYAM-FARSTAT-1-5",
+   "near": "pyro/pyro-i",
+   "pos": [
+    -6.028,
+    5.666
+   ]
+  },
+  {
+   "id": "pyro/pyr1-l1",
+   "kind": "lpoint",
+   "name": "PYR1 L1",
+   "parent": "pyro",
+   "match": [
+    "P1_L1",
+    "PYR1-L1",
+    "PYR1_L1",
+    "Pyro1_L1",
+    "RR_P1_L1"
+   ],
+   "near": "pyro/pyro-i",
+   "pos": [
+    -7.09,
+    -2.272
+   ]
+  },
+  {
+   "id": "pyro/pyr5-l4",
+   "kind": "lpoint",
+   "name": "PYR5 L4",
+   "parent": "pyro",
+   "match": [
+    "P5_L4",
+    "PYR5-L4",
+    "PYR5_L4",
+    "Pyro5_L4",
+    "RR_P5_L4",
+    "Rod's Fuel 'N Supplies",
+    "Rod'sFuel'NSupplies"
+   ],
+   "station": "Rod's Fuel 'N Supplies",
+   "near": "pyro/pyro-v",
+   "pos": [
+    41.429,
+    -11.279
+   ]
+  },
+  {
+   "id": "pyro/pyr6-l1",
+   "kind": "lpoint",
+   "name": "PYR6 L1",
+   "parent": "pyro",
+   "match": [
+    "P6_L1",
+    "PYR6-L1",
+    "PYR6_L1",
+    "Pyro6_L1",
+    "RR_P6_L1"
+   ],
+   "near": "pyro/terminus",
+   "pos": [
+    -47.417,
+    46.159
+   ]
+  },
+  {
+   "id": "pyro/pyr1-l3",
+   "kind": "lpoint",
+   "name": "PYR1 L3",
+   "parent": "pyro",
+   "match": [
+    "P1_L3",
+    "PYAM-FARSTAT-1-3",
+    "PYR1-L3",
+    "PYR1_L3",
+    "Pyro1_L3",
+    "RR_P1_L3"
+   ],
+   "station": "PYAM-FARSTAT-1-3",
+   "near": "pyro/pyro-i",
+   "pos": [
+    8.275,
+    2.23
+   ]
+  },
+  {
+   "id": "pyro/pyr6-l4",
+   "kind": "lpoint",
+   "name": "PYR6 L4",
+   "parent": "pyro",
+   "match": [
+    "Dudley & Daughters",
+    "Dudley&Daughters",
+    "P6_L4",
+    "PYR6-L4",
+    "PYR6_L4",
+    "Pyro6_L4",
+    "RR_P6_L4"
+   ],
+   "station": "Dudley & Daughters",
+   "near": "pyro/terminus",
+   "pos": [
+    -62.036,
+    -28.626
+   ]
+  },
+  {
+   "id": "pyro/pyr2-l3",
+   "kind": "lpoint",
+   "name": "PYR2 L3",
+   "parent": "pyro",
+   "match": [
+    "P2_L3",
+    "PYAM-FARSTAT-2-3",
+    "PYR2-L3",
+    "PYR2_L3",
+    "Pyro2_L3",
+    "RR_P2_L3"
+   ],
+   "station": "PYAM-FARSTAT-2-3",
+   "near": "pyro/monox",
+   "pos": [
+    -2.708,
+    10.27
+   ]
+  },
+  {
+   "id": "pyro/pyr2-l2",
+   "kind": "lpoint",
+   "name": "PYR2 L2",
+   "parent": "pyro",
+   "match": [
+    "P2_L2",
+    "PYR2-L2",
+    "PYR2_L2",
+    "Pyro2_L2",
+    "RR_P2_L2"
+   ],
+   "near": "pyro/monox",
+   "pos": [
+    6.663,
+    -9.597
+   ]
+  },
+  {
+   "id": "pyro/pyr2-l4",
+   "kind": "lpoint",
+   "name": "PYR2 L4",
+   "parent": "pyro",
+   "match": [
+    "Checkmate",
+    "P2_L4",
+    "PYR2-L4",
+    "PYR2_L4",
+    "Pyro2_L4",
+    "RR_P2_L4"
+   ],
+   "station": "Checkmate",
+   "near": "pyro/monox",
+   "pos": [
+    10.577,
+    -0.968
+   ]
+  },
+  {
+   "id": "pyro/pyr5-l5",
+   "kind": "lpoint",
+   "name": "PYR5 L5",
+   "parent": "pyro",
+   "match": [
+    "P5_L5",
+    "PYR5-L5",
+    "PYR5_L5",
+    "Pyro5_L5",
+    "RR_P5_L5",
+    "Rat's Nest",
+    "Rat'sNest"
+   ],
+   "station": "Rat's Nest",
+   "near": "pyro/pyro-v",
+   "pos": [
+    -42.315,
+    -7.286
+   ]
+  },
+  {
+   "id": "pyro/pyr5-l1",
+   "kind": "lpoint",
+   "name": "PYR5 L1",
+   "parent": "pyro",
+   "match": [
+    "P5_L1",
+    "PYAM-FARSTAT-5-1",
+    "PYR5-L1",
+    "PYR5_L1",
+    "Pyro5_L1",
+    "RR_P5_L1"
+   ],
+   "station": "PYAM-FARSTAT-5-1",
+   "near": "pyro/pyro-v",
+   "pos": [
+    -3.522,
+    -38.483
+   ]
+  },
+  {
+   "id": "pyro/pyr5-l3",
+   "kind": "lpoint",
+   "name": "PYR5 L3",
+   "parent": "pyro",
+   "match": [
+    "P5_L3",
+    "PYAM-FARSTAT-5-3",
+    "PYR5-L3",
+    "PYR5_L3",
+    "Pyro5_L3",
+    "RR_P5_L3"
+   ],
+   "station": "PYAM-FARSTAT-5-3",
+   "near": "pyro/pyro-v",
+   "pos": [
+    18.302,
+    38.841
+   ]
+  },
+  {
+   "id": "pyro/akiro-cluster",
+   "kind": "belt",
+   "name": "Akiro Cluster",
+   "parent": "pyro",
+   "match": [
+    "Akiro Cluster",
+    "Pyro_asteroidbeltA",
+    "akirocluster"
+   ]
+  },
+  {
+   "id": "pyro/jump-nyx",
+   "kind": "jump",
+   "name": "Nyx Gateway",
+   "parent": "pyro",
+   "match": [
+    "Nyx Gateway",
+    "Pyro_nyx_JPStation",
+    "jumppoint_pyro_nyx"
+   ],
+   "to": "nyx",
+   "pos": [
+    -35.276,
+    -36.052
+   ]
+  },
+  {
+   "id": "pyro/jump-stanton",
+   "kind": "jump",
+   "name": "Stanton Gateway",
+   "parent": "pyro",
+   "match": [
+    "Pyro_stanton_JPStation",
+    "Stanton Gateway",
+    "jumppoint_pyro_stanton"
+   ],
+   "to": "stanton",
+   "pos": [
+    34.179,
+    40.592
+   ]
+  },
+  {
+   "id": "nyx",
+   "kind": "system",
+   "name": "Nyx",
+   "parent": null,
+   "match": [
+    "Nyx_Star",
+    "nyxstar"
+   ]
+  },
+  {
+   "id": "nyx/nyx-i",
+   "kind": "planet",
+   "name": "Nyx I",
+   "parent": "nyx",
+   "match": [
+    "Nyx I",
+    "Nyx1"
+   ],
+   "pos": [
+    6.495,
+    -3.75
+   ]
+  },
+  {
+   "id": "nyx/nyx-ii",
+   "kind": "planet",
+   "name": "Nyx II",
+   "parent": "nyx",
+   "match": [
+    "Nyx II",
+    "Nyx2"
+   ],
+   "pos": [
+    -3.591,
+    9.867
+   ]
+  },
+  {
+   "id": "nyx/nyx-iii",
+   "kind": "planet",
+   "name": "Nyx III",
+   "parent": "nyx",
+   "match": [
+    "Nyx III",
+    "Nyx3"
+   ],
+   "pos": [
+    -29.11,
+    -24.426
+   ]
+  },
+  {
+   "id": "nyx/delamar",
+   "kind": "planet",
+   "name": "Delamar",
+   "parent": "nyx",
+   "match": [
+    "Delamar"
+   ]
+  },
+  {
+   "id": "nyx/delamar/levski",
+   "kind": "city",
+   "name": "Levski",
+   "parent": "nyx/delamar",
+   "match": [
+    "Levski"
+   ]
+  },
+  {
+   "id": "nyx/glaciem-ring",
+   "kind": "belt",
+   "name": "Glaciem Ring",
+   "parent": "nyx",
+   "match": [
+    "Glaciem Ring",
+    "GlaciemRing",
+    "glaciemring"
+   ]
+  },
+  {
+   "id": "nyx/keeger-belt",
+   "kind": "belt",
+   "name": "Keeger Belt",
+   "parent": "nyx",
+   "match": [
+    "Keeger Belt",
+    "KeegerBelt",
+    "keegerbelt"
+   ]
+  },
+  {
+   "id": "nyx/jump-pyro",
+   "kind": "jump",
+   "name": "Pyro Gateway",
+   "parent": "nyx",
+   "match": [
+    "Nyx_pyro_JPStation",
+    "Pyro Gateway",
+    "jumppoint_nyx_pyro"
+   ],
+   "to": "pyro",
+   "pos": [
+    -12.0,
+    20.785
+   ]
+  },
+  {
+   "id": "nyx/jump-castra",
+   "kind": "jump",
+   "name": "Castra jump point",
+   "parent": "nyx",
+   "match": [
+    "Nyx_castra_JPStation",
+    "jumppoint_nyx_castra"
+   ],
+   "to": "castra",
+   "pos": [
+    -13.5,
+    -23.383
+   ]
+  }
+ ]
+}

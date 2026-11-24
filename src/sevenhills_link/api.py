@@ -7,6 +7,7 @@ import os
 import platform
 import urllib.error
 import urllib.request
+import uuid
 
 from . import __version__
 from .paths import data_dir
@@ -21,10 +22,16 @@ traffic = {"out": 0, "in": 0}
 
 
 class ApiError(Exception):
-    def __init__(self, status: int, message: str):
+    """status 0 means 7Net could not be reached. code and reason come from 7Net's
+    answer when a PC key is refused: code 'unlinked' (reason user, admin,
+    replaced, limit or all), 'expired', 'unauthorized' or 'not_member'."""
+
+    def __init__(self, status: int, message: str, code: str | None = None, reason: str | None = None):
         super().__init__(f"{status}: {message}")
         self.status = status
         self.message = message
+        self.code = code
+        self.reason = reason
 
 
 def _call(method: str, path: str, body: dict | None = None, token: str | None = None, timeout: float = 10) -> dict:
@@ -42,11 +49,14 @@ def _call(method: str, path: str, body: dict | None = None, token: str | None = 
             traffic["in"] += len(raw) + 200
             return json.loads(raw)
     except urllib.error.HTTPError as e:
+        code = reason = None
         try:
-            msg = json.loads(e.read() or b"{}").get("error", e.reason)
+            j = json.loads(e.read() or b"{}")
+            msg = j.get("error", e.reason)
+            code, reason = j.get("code"), j.get("reason")
         except Exception:
             msg = str(e.reason)
-        raise ApiError(e.code, str(msg)) from None
+        raise ApiError(e.code, str(msg), code if isinstance(code, str) else None, reason if isinstance(reason, str) else None) from None
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         raise ApiError(0, str(e)) from None
 
@@ -55,16 +65,45 @@ def device_name() -> str:
     return (platform.node() or "PC")[:60]
 
 
+def install_id() -> str:
+    """A random id for this installation, made on first use and kept in the data folder.
+    When the same installation is linked again, 7Net unlinks its old key. Not tied to
+    the hardware."""
+    f = data_dir() / "install.id"
+    try:
+        return str(uuid.UUID(f.read_text().strip()))
+    except (OSError, ValueError):
+        pass
+    new = str(uuid.uuid4())
+    try:
+        f.write_text(new)
+    except OSError:
+        pass
+    return new
+
+
 def start_link() -> dict:
-    return _call("POST", "/api/telemetry/link/start", {"device_name": device_name()})
+    return _call("POST", "/api/telemetry/link/start", {"device_name": device_name(), "install_id": install_id()})
+
+
+def unlink_device(token: str) -> dict:
+    """Asks 7Net to stop accepting this PC's key. Call before forgetting the key."""
+    return _call("POST", "/api/telemetry/device/unlink", {}, token=token, timeout=6)
 
 
 def poll_link(code: str, poll_secret: str) -> dict:
     return _call("POST", "/api/telemetry/link/poll", {"code": code, "poll_secret": poll_secret})
 
 
-def ingest(token: str, frame: dict | None, events: list[str]) -> dict:
-    return _call("POST", "/api/telemetry/ingest", {"client_version": __version__, "frame": frame, "events": events}, token=token)
+_UNSET = object()
+
+
+def ingest(token: str, frame: dict | None, events: list[str], location=_UNSET) -> dict:
+    """location: a place from Game.log (location.Tracker.snapshot), None to clear it, or left out."""
+    body = {"client_version": __version__, "frame": frame, "events": events}
+    if location is not _UNSET:
+        body["location"] = location
+    return _call("POST", "/api/telemetry/ingest", body, token=token)
 
 
 def get_settings(token: str) -> dict:

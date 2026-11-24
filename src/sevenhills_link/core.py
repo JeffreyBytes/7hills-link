@@ -12,7 +12,7 @@ import time
 from collections import deque
 import webbrowser
 
-from . import __version__, api, detect, gamecfg, protoset, updater
+from . import __version__, api, detect, gamecfg, location, protoset, updater
 from .paths import data_dir
 from .prefs import Prefs, can_autostart
 from .stream import GameStream
@@ -22,6 +22,23 @@ TICK = 0.05             # how often the loop looks for news
 HEARTBEAT = 15.0        # upload at least this often while connected, even if nothing new
 SETTINGS_EVERY = 30.0   # refresh sharing settings from 7Net
 UPDATE_EVERY = 6 * 3600 # look for a new release
+LOC_REFRESH = 60.0      # resend the place now and then even when it did not change
+
+UNLINK_UNCONFIRMED = ("7Net did not confirm the unlink, so this PC is only unlinked here. "
+                      "Unlink it on 7hills.space too: Profile \u2192 PCs.")
+
+
+def lost_key_message(e: "api.ApiError | None") -> str:
+    """Why 7Net refused this PC's key, for the window."""
+    code = getattr(e, "code", None)
+    reason = getattr(e, "reason", None)
+    if code == "expired":
+        return "This PC was not used for 90 days, so its link expired. Link it again."
+    if code == "unlinked" and reason == "admin":
+        return "An admin unlinked this PC from 7Net. Link it again if you should have access."
+    if code == "unlinked" and reason == "limit":
+        return "This PC was unlinked because another PC was linked and you can have 5. Link it again."
+    return "This PC was unlinked on 7Net. Link it again."
 
 
 def _summary(frame: dict | None) -> dict:
@@ -162,6 +179,9 @@ class Core:
         self._traffic: deque = deque(maxlen=120)   # (time, bytes out, bytes in), one per tick second
         self.delay_wait = None    # s from the game's frame to the start of its upload (smoothed)
         self.delay_upload = None  # s the upload to 7Net took (smoothed)
+        # Where the player is, from Game.log next to the game's exe (see location.py).
+        self.tracker = location.Tracker(location.Places.load())
+        self.gamelog: location.GameLogFollower | None = None
 
     # ---------------------------------------------------------------- setup
 
@@ -241,8 +261,21 @@ class Core:
 
     # ---------------------------------------------------------------- stream
 
+    def _restart_gamelog(self, inst: detect.Install | None) -> None:
+        path = inst.folder / "Game.log" if inst else None
+        if self.gamelog and path and self.gamelog.path == path:
+            return
+        if self.gamelog:
+            self.gamelog.stop()
+            self.gamelog = None
+        self.tracker.reset()
+        if path:
+            self.gamelog = location.GameLogFollower(path, self.tracker)
+            self.gamelog.start()
+
     def _restart_stream(self) -> None:
         inst = self.current()
+        self._restart_gamelog(inst)
         if self.stream:
             self.stream.stop()
             self.stream = None
@@ -297,13 +330,28 @@ class Core:
             self.link, self.link_error = None, "The code expired. Start again."
 
     def unlink(self) -> None:
+        """The member pressed Unlink: 7Net stops accepting the key first, then it is forgotten here."""
+        token = self.token
+        error = None
+        if token:
+            try:
+                api.unlink_device(token)
+            except api.ApiError as e:
+                # 401: 7Net already refuses this key, so there is nothing left to unlink there.
+                if e.status != 401:
+                    error = UNLINK_UNCONFIRMED
+        self._forget_key()
+        self.link_error = error
+
+    def _forget_key(self) -> None:
         api.clear_token()
         with self.lock:
             self.token, self.linked, self.member, self.settings = None, False, None, None
 
-    def _lost_key(self) -> None:
-        self.unlink()
-        self.link_error = "This PC was unlinked on 7Net. Link it again."
+    def _lost_key(self, e: api.ApiError | None = None) -> None:
+        """7Net refused the key: forget it and say why."""
+        self._forget_key()
+        self.link_error = lost_key_message(e)
 
     # ---------------------------------------------------------------- sharing
 
@@ -316,7 +364,7 @@ class Core:
             self.member, self.settings = r.get("member"), r.get("settings")
         except api.ApiError as e:
             if e.status == 401:
-                self._lost_key()
+                self._lost_key(e)
 
     def set_share(self, patch: dict) -> dict:
         if self.token:
@@ -328,7 +376,7 @@ class Core:
                 self.member, self.settings = r.get("member"), r.get("settings")
             except api.ApiError as e:
                 if e.status == 401:
-                    self._lost_key()
+                    self._lost_key(e)
         return self.status()
 
     # ---------------------------------------------------------------- upload loop
@@ -339,6 +387,8 @@ class Core:
         self.refresh_settings(force=True)
         last_sent_frame_at = 0.0
         last_sent_json = ""
+        last_loc_json = ""
+        last_loc_sent = 0.0
         last_try = 0.0
         backoff_until = 0.0
         last_scan = time.time()
@@ -355,18 +405,26 @@ class Core:
                 continue
             new_frame, has_events = self.stream.pending(last_sent_frame_at)
             heartbeat = self.stream.connected and now - self.last_upload >= HEARTBEAT
-            if not (new_frame or has_events or heartbeat):
+            # The place from Game.log: sent when it changed (or cleared), and once a minute.
+            loc = self.tracker.snapshot()
+            loc_json = json.dumps(loc, sort_keys=True) if loc else ""
+            loc_due = self.stream.connected and (loc_json != last_loc_json or (bool(loc) and now - last_loc_sent >= LOC_REFRESH))
+            if not (new_frame or has_events or heartbeat or loc_due):
                 continue
             frame, at, events = self.stream.take()
             # The game sends ~17 frames a second; upload only when the content changed.
             frame_json = json.dumps(frame, sort_keys=True, default=str) if frame is not None else ""
-            if frame_json == last_sent_json and not events and not heartbeat:
+            if frame_json == last_sent_json and not events and not heartbeat and not loc_due:
                 last_sent_frame_at = at
                 continue
             last_try = now
             t0 = time.time()
             try:
-                api.ingest(self.token, frame, events)
+                if loc_due:
+                    api.ingest(self.token, frame, events, location=loc)
+                    last_loc_json, last_loc_sent = loc_json, time.time()
+                else:
+                    api.ingest(self.token, frame, events)
                 t1 = time.time()
                 self.delay_wait = _smooth(self.delay_wait, max(0.0, t0 - at)) if at else self.delay_wait
                 self.delay_upload = _smooth(self.delay_upload, t1 - t0)
@@ -376,8 +434,8 @@ class Core:
             except api.ApiError as e:
                 self.upload_error = e.message
                 if e.status == 401:
-                    self._lost_key()
-                elif e.status == 429:
+                    self._lost_key(e)
+                elif e.status in (429, 503):
                     backoff_until = time.time() + 2.0
 
     # ---------------------------------------------------------------- sound
@@ -412,6 +470,8 @@ class Core:
         self._stop.set()
         if self.stream:
             self.stream.stop()
+        if self.gamelog:
+            self.gamelog.stop()
 
     # ---------------------------------------------------------------- status for the window
 
@@ -457,4 +517,6 @@ class Core:
                 "last_upload_ago": round(time.time() - self.last_upload, 1) if self.last_upload else None,
                 "upload_error": self.upload_error,
                 "now": _summary(frame),
+                "where": self.tracker.describe(),
+                "gamelog_error": self.gamelog.error if self.gamelog else None,
             }
