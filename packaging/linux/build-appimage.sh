@@ -22,7 +22,16 @@ mkdir -p "$BUILD" "$DIST"
     --workpath "$BUILD/pyinstaller" --distpath "$BUILD/pyinstaller-dist" \
     "$HERE/7HillsLink.spec"
 
-mkdir -p "$APPDIR/usr/lib" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+# A system library in the bundle shadows the system's own copy for WebKit and GTK (see the spec).
+# Only libpython, libmpdec and wheel-vendored libraries (renamed with a hash) belong at the top level.
+extra=$(cd "$BUILD/pyinstaller-dist/7HillsLink/_internal" && ls lib*.so* 2>/dev/null \
+    | grep -Ev '^(libpython|libmpdec)' | grep -Ev -- '-[0-9a-f]{8}\.so' || true)
+if [ -n "$extra" ]; then
+    echo "unexpected system libraries in the bundle (filter them in 7HillsLink.spec):" $extra >&2
+    exit 1
+fi
+
+mkdir -p "$APPDIR/usr/lib""$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp -a "$BUILD/pyinstaller-dist/7HillsLink" "$APPDIR/usr/lib/"
 install -m 755 "$HERE/AppRun" "$APPDIR/AppRun"
 cp "$HERE/7hills-link.desktop" "$APPDIR/7hills-link.desktop"
