@@ -42,9 +42,13 @@ a = Analysis(
 )
 
 # --- Leave the GTK / WebKitGTK / AppIndicator / GStreamer stack to the system ---
-# Kept at the top level: Python's own dependencies, and libraries vendored inside pip wheels.
-KEEP = re.compile(r"^(libpython|libffi|libssl|libcrypto|libz\.|libbz2|liblzma|libexpat|libsqlite3|libmpdec"
-                  r"|libreadline|libncursesw|libtinfo|libuuid|libstdc\+\+|libgcc_s)")
+# The bundled folder comes first on the library path, so a bundled library also replaces the system's
+# copy for the system's WebKit and GTK. Built on an old distro, it is then too old for them (e.g.
+# libstdc++ without CXXABI_1.3.15 for a newer ICU). So only libraries the GUI stack never loads are kept:
+# libpython, libmpdec, extension modules, and libraries vendored (and renamed) inside pip wheels.
+# libstdc++, libgcc_s, zlib, libffi, OpenSSL, expat, xz, bzip2, sqlite, ... come from the system; they
+# keep their ABI, so Python's modules built against older versions load them fine.
+KEEP = re.compile(r"^(libpython|libmpdec)")
 WHEEL = re.compile(r"-[0-9a-f]{8}\.so")              # auditwheel-renamed libs from manylinux wheels
 EXT = re.compile(r"\.cpython-\d+[^/]*\.so$")          # Python extension modules
 SYSTEM_DIRS = ("gi_typelibs/", "gio_modules/", "gst_plugins/", "lib/", "share/")
