@@ -435,7 +435,7 @@ class Core:
                 self.upload_error = e.message
                 if e.status == 401:
                     self._lost_key(e)
-                elif e.status == 429:
+                elif e.status in (429, 503):
                     backoff_until = time.time() + 2.0
 
     # ---------------------------------------------------------------- sound
